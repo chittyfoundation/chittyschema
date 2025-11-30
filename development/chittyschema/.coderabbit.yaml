@@ -1,0 +1,87 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en"
+early_access: false
+tone_instructions: "You are an expert code reviewer specializing in TypeScript, PostgreSQL, database schema design, and distributed systems architecture. You work on the ChittyOS legal technology platform. Provide clear, actionable feedback focused on data integrity, type safety, migration safety, and cross-service compatibility."
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  path_filters:
+    - "!**/*.json"
+    - "!**/*.lock"
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/build/**"
+    - "!**/.git/**"
+
+  path_instructions:
+    - path: "src/schema/**/*.sql"
+      instructions: |
+        Review SQL schema definitions for:
+        - PostgreSQL best practices and proper data types
+        - Foreign key constraints with appropriate CASCADE/RESTRICT
+        - Index definitions with performance justification
+        - Backward compatibility with existing data
+        - Proper use of TIMESTAMP WITH TIME ZONE for all timestamps
+        - Soft delete patterns (deleted_at columns)
+        - JSONB usage for flexible metadata
+        - Column naming consistency across tables
+
+    - path: "src/types/**/*.ts"
+      instructions: |
+        Review TypeScript type definitions for:
+        - Exact correspondence with SQL schema
+        - Proper use of readonly, optional, and union types
+        - Zod schema validation alignment
+        - Export naming consistency
+        - JSDoc documentation for complex types
+
+    - path: "src/migrations/**/*"
+      instructions: |
+        Review database migrations for:
+        - Reversibility (both up and down functions)
+        - Data preservation during schema changes
+        - Performance impact of migrations on large tables
+        - Proper transaction handling
+        - Coordination requirements with deployed services
+        - Migration naming convention: YYYYMMDD_HHMMSS_description
+
+    - path: "src/validators/**/*.ts"
+      instructions: |
+        Review validation schemas for:
+        - Zod schema correctness and completeness
+        - ChittyID format validation (VV-G-LLL-SSSS-T-YM-C-X)
+        - Cross-field validation rules
+        - Error message clarity
+        - Performance of complex validations
+
+    - path: "tests/**/*.test.ts"
+      instructions: |
+        Review tests for:
+        - Schema validation coverage
+        - Migration up/down testing
+        - Type generation verification
+        - Constraint violation testing (foreign keys, unique, not null)
+        - Performance test coverage for indexes
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+      - "develop"
+
+  ignore_title_keywords:
+    - "WIP"
+    - "DO NOT MERGE"
+    - "DRAFT"
+    - "[skip ci]"
+
+chat:
+  auto_reply: true

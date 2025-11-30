@@ -1,0 +1,131 @@
+name: Schema Certification
+
+on:
+  workflow_call:
+    inputs:
+      service-path:
+        description: 'Path to the service to validate'
+        required: false
+        default: '.'
+        type: string
+    outputs:
+      compliant:
+        description: 'Whether the service is schema-compliant'
+        value: ${{ jobs.validate.outputs.compliant }}
+      score:
+        description: 'Compliance score (0-100)'
+        value: ${{ jobs.validate.outputs.score }}
+
+jobs:
+  validate:
+    name: Validate Schema Compliance
+    runs-on: ubuntu-latest
+    outputs:
+      compliant: ${{ steps.validate.outputs.compliant }}
+      score: ${{ steps.validate.outputs.score }}
+
+    steps:
+      - name: Checkout Service Repository
+        uses: actions/checkout@v4
+        with:
+          path: service
+
+      - name: Checkout ChittySchema
+        uses: actions/checkout@v4
+        with:
+          repository: chittyfoundation/chittyschema
+          path: chittyschema
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: chittyschema/package-lock.json
+
+      - name: Install ChittySchema Dependencies
+        working-directory: chittyschema
+        run: npm ci
+
+      - name: Run Schema Compliance Validation
+        id: validate
+        working-directory: chittyschema
+        run: |
+          npm run validate:service ../service/${{ inputs.service-path }} > compliance-report.txt 2>&1 || true
+          cat compliance-report.txt
+
+          # Extract compliance status
+          if grep -q "Service is schema-compliant" compliance-report.txt; then
+            echo "compliant=true" >> $GITHUB_OUTPUT
+          else
+            echo "compliant=false" >> $GITHUB_OUTPUT
+          fi
+
+          # Extract score
+          SCORE=$(grep -oP 'Score: \K\d+' compliance-report.txt || echo "0")
+          echo "score=$SCORE" >> $GITHUB_OUTPUT
+
+          # Upload report
+          cp compliance-report.txt ../service/
+
+      - name: Upload Compliance Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: schema-compliance-report
+          path: service/compliance-report.txt
+          retention-days: 30
+
+      - name: Create PR Comment
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('service/compliance-report.txt', 'utf8');
+            const compliant = '${{ steps.validate.outputs.compliant }}' === 'true';
+            const score = '${{ steps.validate.outputs.score }}';
+
+            const badge = compliant
+              ? '🎉 **SCHEMA COMPLIANT**'
+              : '⛔ **NOT COMPLIANT**';
+
+            const body = `## ${badge}
+
+**Schema Compliance Score:** ${score}/100
+
+<details>
+<summary>📊 Full Compliance Report</summary>
+
+\`\`\`
+${report}
+\`\`\`
+
+</details>
+
+---
+*Schema certification powered by [chittyschema](https://github.com/chittyfoundation/chittyschema)*
+`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Block Merge if Non-Compliant
+        if: steps.validate.outputs.compliant != 'true'
+        run: |
+          echo "❌ Service is not schema-compliant (Score: ${{ steps.validate.outputs.score }}/100)"
+          echo "Minimum required: 80/100 with zero critical violations"
+          echo ""
+          echo "Fix violations and re-run validation."
+          exit 1
+
+      - name: Success
+        if: steps.validate.outputs.compliant == 'true'
+        run: |
+          echo "✅ Service is schema-compliant! Score: ${{ steps.validate.outputs.score }}/100"
+          echo "Ready for certification and deployment."

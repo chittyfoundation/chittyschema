@@ -1,0 +1,58 @@
+{
+  "databases": [
+    {
+      "name": "chittyos-core",
+      "description": "Primary operational database for ChittyOS ecosystem",
+      "envVar": "CHITTYOS_CORE_DB_URL",
+      "owner": "ChittyOS Platform",
+      "services": [
+        "chittyid",
+        "chittyauth",
+        "chittyverify",
+        "chittyscore",
+        "chittyconnect",
+        "chittyrouter",
+        "chittychronicle",
+        "chittyreception"
+      ],
+      "tables": {
+        "identities": "chittyid",
+        "credentials": "chittyid",
+        "api_tokens": "chittyauth",
+        "oauth_clients": "chittyauth",
+        "oauth_authorization_codes": "chittyauth",
+        "registrations": "chittyauth",
+        "verifications": "chittyverify",
+        "trust_networks": "chittyscore",
+        "trust_scores": "chittyscore",
+        "trust_events": "chittyscore",
+        "chronicle_events": "chittychronicle",
+        "reception_calls": "chittyreception",
+        "reception_messages": "chittyreception",
+        "reception_sessions": "chittyreception",
+        "audit_logs": "shared"
+      }
+    },
+    {
+      "name": "chittyledger",
+      "description": "Legal evidence and transaction ledger for court-admissible records",
+      "envVar": "CHITTYLEDGER_DB_URL",
+      "owner": "ChittyLedger Team",
+      "services": [
+        "chittyledger",
+        "chittychain",
+        "bane"
+      ],
+      "tables": {
+        "users": "chittyledger",
+        "cases": "chittyledger",
+        "evidence": "chittyledger",
+        "evidence_chain": "chittyledger",
+        "facts": "chittyledger",
+        "contradictions": "chittyledger",
+        "blockchain_records": "chittychain",
+        "codex_projects": "bane"
+      }
+    }
+  ]
+}

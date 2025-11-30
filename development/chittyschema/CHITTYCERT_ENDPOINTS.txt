@@ -1,0 +1,27 @@
+ChittyCert API Endpoints (Updated 2025-01-06)
+==============================================
+
+Base URL: https://cert.chitty.cc
+
+Certificate Issuance:
+  POST   /api/v1/x509/ca/issue
+
+OCSP Revocation Check:
+  GET    /api/v1/x509/ocsp/:serial
+
+Chain Validation:
+  POST   /api/v1/x509/validate
+
+CRL Download:
+  GET    /api/v1/x509/crl/:caName.crl
+
+Get Certificate:
+  GET    /api/v1/x509/certificates/:serial
+
+---
+
+BREAKING CHANGES from previous version:
+  ❌ OLD: https://cert.chitty.foundation/api/v1/issue
+  ✅ NEW: https://cert.chitty.cc/api/v1/x509/ca/issue
+
+All endpoints now namespaced under /api/v1/x509/

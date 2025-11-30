@@ -1,0 +1,81 @@
+{
+  "name": "@chittyos/schema",
+  "version": "0.1.1",
+  "description": "Universal data framework and schema definitions for ChittyOS - automatically generates types, validators, and documentation from live database",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "bin": {
+    "chittyschema": "./cli.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "dev:api": "wrangler dev api/index.ts",
+    "build": "tsc && tsc-alias",
+    "build:api": "tsc && tsc-alias",
+    "introspect": "tsx scripts/introspect-all.ts",
+    "introspect:single": "tsx scripts/introspect-schema.ts",
+    "generate": "npm run introspect && npm run generate:types && npm run generate:validators && npm run generate:docs",
+    "generate:types": "tsx scripts/generate-types-multi.ts",
+    "generate:types:single": "tsx scripts/generate-types.ts",
+    "generate:validators": "tsx scripts/generate-validators-multi.ts",
+    "generate:validators:single": "tsx scripts/generate-validators.ts",
+    "generate:docs": "tsx scripts/generate-docs-multi.ts",
+    "generate:docs:single": "tsx scripts/generate-docs.ts",
+    "validate": "tsx scripts/validate-schema.ts",
+    "validate:service": "tsx scripts/validate-service-compliance.ts",
+    "certify": "tsx scripts/validate-service-compliance.ts",
+    "migration:create": "tsx scripts/create-migration.ts",
+    "migration:apply": "tsx scripts/apply-migration.ts",
+    "migration:rollback": "tsx scripts/rollback-migration.ts",
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "chittyos",
+    "schema",
+    "typescript",
+    "postgresql",
+    "types",
+    "validation",
+    "zod"
+  ],
+  "author": "Chitty Foundation",
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^3.22.4",
+    "pg": "^8.11.3",
+    "hono": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@types/pg": "^8.10.9",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "tsc-alias": "^1.8.8",
+    "vitest": "^1.2.1",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "prettier": "^3.2.4",
+    "pg-to-ts": "^4.1.1"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chittyfoundation/chittyschema.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  }
+}

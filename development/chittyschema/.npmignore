@@ -1,0 +1,44 @@
+# Source files (only ship dist/)
+src/
+scripts/
+tests/
+.github/
+
+# Development files
+node_modules/
+*.log
+*.tgz
+.DS_Store
+.env
+.env.*
+
+# Documentation (include in package)
+# README.md
+# SCHEMA_GOVERNANCE.md
+# CERTIFICATION.md
+# INTEGRATION_GUIDE.md
+
+# Build artifacts to exclude
+tsconfig.json
+tsconfig.*.json
+.eslintrc.js
+.prettierrc
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.md.backup
+IMPLEMENTATION_SUMMARY.md
+READY_TO_DEPLOY.md
+DEPLOYMENT.md
+introspection.log
+compliance-report.txt
