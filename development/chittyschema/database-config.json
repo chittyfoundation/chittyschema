@@ -53,6 +53,31 @@
         "blockchain_records": "chittychain",
         "codex_projects": "bane"
       }
+    },
+    {
+      "name": "chittycanon",
+      "description": "ChittyFoundation ontology governance and standards registry",
+      "envVar": "CHITTYCANON_DB_URL",
+      "owner": "ChittyFoundation",
+      "services": [
+        "chittycanon",
+        "chittystandards",
+        "chittyschema"
+      ],
+      "tables": {
+        "ontology_terms": "chittycanon",
+        "term_observations": "chittycanon",
+        "standards_sources": "chittystandards",
+        "standards_terms": "chittystandards",
+        "reserved_words": "chittystandards",
+        "known_abbreviations": "chittystandards",
+        "alignment_map": "chittystandards",
+        "divergence_registry": "chittystandards",
+        "leadership_initiatives": "chittystandards",
+        "domain_needs": "chittystandards",
+        "concept_needs": "chittystandards",
+        "canon_audit_log": "shared"
+      }
     }
   ]
 }
