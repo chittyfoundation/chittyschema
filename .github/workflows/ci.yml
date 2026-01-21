@@ -1,0 +1,43 @@
+# Canonical CI Workflow - chittyschema
+# Reference: chittycanon://gov/governance
+# Uses centralized reusable workflow from chittyfoundation/.github
+
+name: CI
+
+on:
+  push:
+      branches: [main]
+        pull_request:
+            branches: [main]
+
+            jobs:
+              ci:
+                  uses: chittyfoundation/.github/.github/workflows/reusable-ci-pipeline.yml@main
+                      with:
+                            node-version: '20'
+                                  run-ai-review: true
+                                        run-governance: true
+                                            secrets:
+                                                  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+                                                        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+                                                          # Schema-specific validation
+                                                            validate-schemas:
+                                                                runs-on: ubuntu-latest
+                                                                    steps:
+                                                                          - uses: actions/checkout@v4
+
+                                                                                      - name: Setup Node.js
+                                                                                              uses: actions/setup-node@v4
+                                                                                                      with:
+                                                                                                                node-version: '20'
+                                                                                                                          cache: 'npm'
+                                                                                                                                
+                                                                                                                                      - name: Install dependencies
+                                                                                                                                              run: npm ci
+                                                                                                                                                      
+                                                                                                                                                            - name: Validate TypeScript schemas
+                                                                                                                                                                    run: npm run validate --if-present
+                                                                                                                                                                            
+                                                                                                                                                                                  - name: Run type checks
+                                                                                                                                                                                          run: npm run typecheck --if-present
