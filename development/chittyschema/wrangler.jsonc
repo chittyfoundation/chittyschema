@@ -2,61 +2,28 @@
 {
   "name": "chittyschema-api",
   "main": "api/index.ts",
-  "compatibility_date": "2024-01-01",
+  "compatibility_date": "2026-03-16",
   "compatibility_flags": [
     "nodejs_compat"
   ],
   "account_id": "0bc21e3a5a9de1a4cc843be9c3e98121",
-  "env": {
-    "production": {
-      "name": "chittyschema-api",
-      "routes": [
-        {
-          "pattern": "schema.chitty.cc/*",
-          "zone_name": "chitty.cc"
-        }
-      ],
-      "vars": {
-        "ENVIRONMENT": "production"
-      },
-      "kv_namespaces": [
-        {
-          "binding": "REGISTRY_KV",
-          "id": "c242ebbe796d4099b16c96dd687c0229"
-        }
-      ]
-    },
-    "staging": {
-      "name": "chittyschema-api-staging",
-      "routes": [
-        {
-          "pattern": "schema-staging.chitty.cc/*",
-          "zone_name": "chitty.cc"
-        }
-      ],
-      "vars": {
-        "ENVIRONMENT": "staging"
-      },
-      "kv_namespaces": [
-        {
-          "binding": "REGISTRY_KV",
-          "id": "619acafef9dc4310a61712521ea10edf"
-        }
-      ]
-    },
-    "development": {
-      "name": "chittyschema-api-dev",
-      "vars": {
-        "ENVIRONMENT": "development"
-      },
-      "kv_namespaces": [
-        {
-          "binding": "REGISTRY_KV",
-          "preview_id": "10a3c500a2404906b4f8a6467dadca57"
-        }
-      ]
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "schema.chitty.cc/*",
+      "zone_name": "chitty.cc"
     }
+  ],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "SERVICE_NAME": "chittyschema"
   },
+  "kv_namespaces": [
+    {
+      "binding": "REGISTRY_KV",
+      "id": "c242ebbe796d4099b16c96dd687c0229"
+    }
+  ],
   "build": {
     "command": "npm run build:api"
   },
