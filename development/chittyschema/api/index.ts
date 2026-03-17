@@ -37,7 +37,7 @@ app.use('*', cors({
 // Health check
 app.get('/api/health', (c) => {
   return c.json({
-    status: 'healthy',
+    status: 'ok',
     service: 'chittyschema',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
