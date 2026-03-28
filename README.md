@@ -1,5 +1,6 @@
 ![Foundation](https://img.shields.io/badge/Foundation-service-8B5CF6?style=flat-square)
 ![Tier](https://img.shields.io/badge/tier-0%20Trust%20Anchors-6366F1?style=flat-square)
+![Deploy](https://img.shields.io/badge/deploy-Cloudflare%20Workers-F38020?style=flat-square&logo=cloudflare)
 
 # ChittySchema
 
