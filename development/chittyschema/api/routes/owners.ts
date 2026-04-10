@@ -22,6 +22,12 @@
 import { Hono } from 'hono';
 // @ts-expect-error - JSON import resolves via resolveJsonModule
 import dbConfig from '../../database-config.json';
+import {
+  checkTable,
+  driftKey,
+  beaconKey,
+  type DriftState,
+} from '../lib/drift-check';
 
 export interface TableOwner {
   table: string;
@@ -48,6 +54,26 @@ interface DatabaseConfig {
   tableOwners: TableOwner[];
 }
 
+/**
+ * Beacon announcement persisted in KV when a service calls POST /beacon on
+ * deploy. Used to detect "live DB moved but authoring service didn't deploy"
+ * situations, which are almost always drift problems.
+ */
+export interface ServiceBeacon {
+  service: string;
+  version: string;
+  gitSha?: string;
+  lastMigration?: string;
+  deployedAt: string;
+  receivedAt: string;
+  environment?: string;
+}
+
+type Env = {
+  ENVIRONMENT?: string;
+  REGISTRY_KV?: KVNamespace;
+} & Record<string, unknown>;
+
 const config = dbConfig as DatabaseConfig;
 
 /**
@@ -68,7 +94,7 @@ function findByTableAndDatabase(
   );
 }
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Env }>();
 
 /**
  * Full manifest, optionally filtered by query parameters.
@@ -155,6 +181,198 @@ app.get('/summary', (c) => {
     {
       'Cache-Control': 'public, max-age=60, stale-while-revalidate=300',
     }
+  );
+});
+
+/**
+ * Service beacon endpoint. Any service that owns manifested tables should POST
+ * here on deploy, announcing what version it's running and what migration it
+ * last applied. State is keyed by service name and kept in REGISTRY_KV.
+ *
+ * Body: { service, version, gitSha?, lastMigration?, deployedAt?, environment? }
+ */
+app.post('/beacon', async (c) => {
+  const kv = c.env.REGISTRY_KV;
+  if (!kv) {
+    return c.json(
+      { success: false, error: 'REGISTRY_KV binding is not configured' },
+      503
+    );
+  }
+
+  let body: Partial<ServiceBeacon>;
+  try {
+    body = await c.req.json<Partial<ServiceBeacon>>();
+  } catch {
+    return c.json({ success: false, error: 'Invalid JSON body' }, 400);
+  }
+
+  if (!body.service || !body.version) {
+    return c.json(
+      {
+        success: false,
+        error: 'Required fields: service, version',
+      },
+      400
+    );
+  }
+
+  const now = new Date().toISOString();
+  const beacon: ServiceBeacon = {
+    service: body.service,
+    version: body.version,
+    gitSha: body.gitSha,
+    lastMigration: body.lastMigration,
+    deployedAt: body.deployedAt || now,
+    receivedAt: now,
+    environment: body.environment || c.env.ENVIRONMENT,
+  };
+
+  await kv.put(beaconKey(beacon.service), JSON.stringify(beacon));
+
+  // Emit structured event so ChittyTrack can display a "who deployed what"
+  // timeline. The beacon event is always low-priority.
+  console.log(
+    JSON.stringify({
+      event: 'schema.beacon',
+      service: 'chittyschema',
+      timestamp: now,
+      beacon,
+    })
+  );
+
+  return c.json({ success: true, beacon }, 201);
+});
+
+/**
+ * List the most recent beacon per service. Used by chittymonitor dashboards
+ * and the "what is running where" debugging queries.
+ */
+app.get('/beacons', async (c) => {
+  const kv = c.env.REGISTRY_KV;
+  if (!kv) {
+    return c.json(
+      { success: false, error: 'REGISTRY_KV binding is not configured' },
+      503
+    );
+  }
+
+  const list = await kv.list({ prefix: 'beacon:' });
+  const beacons: ServiceBeacon[] = [];
+  for (const key of list.keys) {
+    const value = await kv.get(key.name);
+    if (value) {
+      try {
+        beacons.push(JSON.parse(value) as ServiceBeacon);
+      } catch {
+        /* skip malformed entry */
+      }
+    }
+  }
+
+  return c.json(
+    {
+      success: true,
+      count: beacons.length,
+      beacons: beacons.sort((a, b) =>
+        b.receivedAt.localeCompare(a.receivedAt)
+      ),
+    },
+    200,
+    { 'Cache-Control': 'private, max-age=15' }
+  );
+});
+
+/**
+ * Run a drift check on demand for one manifested table. Useful for:
+ *   - GitHub webhook → ChittyTrack → here when an authoring push lands
+ *   - CI jobs that want to confirm their migration matches the live DB
+ *   - Manual operator runs during incident response
+ *
+ * Body: { database, table }
+ */
+app.post('/validate', async (c) => {
+  let body: { database?: string; table?: string };
+  try {
+    body = await c.req.json<{ database?: string; table?: string }>();
+  } catch {
+    return c.json({ success: false, error: 'Invalid JSON body' }, 400);
+  }
+
+  if (!body.database || !body.table) {
+    return c.json(
+      {
+        success: false,
+        error: 'Required fields: database, table',
+      },
+      400
+    );
+  }
+
+  const owner = findByTableAndDatabase(body.table, body.database);
+  if (!owner) {
+    return c.json(
+      {
+        success: false,
+        error: `No manifested owner for ${body.database}.${body.table}`,
+      },
+      404
+    );
+  }
+
+  const state = await checkTable(c.env, body.database, body.table);
+  const statusCode =
+    state.status === 'drift'
+      ? 409
+      : state.status === 'scan_error' || state.status === 'table_missing'
+        ? 502
+        : 200;
+
+  return c.json({ success: state.status !== 'scan_error', state }, statusCode);
+});
+
+/**
+ * Read the latest drift state for a single table from KV. Safe to call from
+ * dashboards — no database connection happens here.
+ */
+app.get('/:database/:table/drift', async (c) => {
+  const database = c.req.param('database');
+  const table = c.req.param('table');
+  const kv = c.env.REGISTRY_KV;
+
+  if (!kv) {
+    return c.json(
+      { success: false, error: 'REGISTRY_KV binding is not configured' },
+      503
+    );
+  }
+
+  const raw = await kv.get(driftKey(database, table));
+  if (!raw) {
+    return c.json(
+      {
+        success: false,
+        error: `No drift state recorded for ${database}.${table}`,
+        hint: 'Run POST /api/owners/validate or wait for the next scheduled scan.',
+      },
+      404
+    );
+  }
+
+  let state: DriftState;
+  try {
+    state = JSON.parse(raw) as DriftState;
+  } catch {
+    return c.json(
+      { success: false, error: 'Corrupt drift state in KV' },
+      500
+    );
+  }
+
+  return c.json(
+    { success: true, state },
+    200,
+    { 'Cache-Control': 'public, max-age=30' }
   );
 });
 

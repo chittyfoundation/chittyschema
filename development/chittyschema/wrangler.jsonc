@@ -1,4 +1,24 @@
 // chittyschema-api — Cloudflare Workers configuration
+//
+// The ongoing validation loop requires:
+//   - triggers.crons: hourly drift scan across manifested tables
+//   - tail_consumers: route structured logs to ChittyTrack at track.chitty.cc
+//   - Database URL secrets per manifested Neon database (see list below)
+//
+// Secrets are injected via `wrangler secret put` — NOT declared here.
+// The manifested env var names are (from database-config.json):
+//   CHITTYOS_CORE_DB_URL        → chittyos-core
+//   CHITTYLEDGER_DB_URL         → chittyledger
+//   CHITTYCANON_DB_URL          → chittycanon
+//   CHITTYEVIDENCE_DB_URL       → chittyevidence-db
+//   CHITTYCOMMAND_DB_URL        → chittycommand
+//   CHITTYAGENT_TASKS_DB_URL    → chittyentity-tasks
+//   CHITTYCONNECT_DB_URL        → chittyconnect
+//   CHITTYDISPUTE_DB_URL        → chittydispute
+//
+// Any DB whose secret is not bound will emit `schema.scan.skip` events
+// with `reason: "not_configured"` — these are real, actionable signals,
+// not stubs.
 {
   "name": "chittyschema-api",
   "main": "api/index.ts",
@@ -22,6 +42,16 @@
     {
       "binding": "REGISTRY_KV",
       "id": "c242ebbe796d4099b16c96dd687c0229"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "0 * * * *"
+    ]
+  },
+  "tail_consumers": [
+    {
+      "service": "chittytrack"
     }
   ],
   "build": {

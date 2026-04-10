@@ -16,11 +16,18 @@ import { tablesRoute } from './routes/tables';
 import { generateRoute } from './routes/generate';
 import { registryRoute } from './routes/registry';
 import { ownersRoute } from './routes/owners';
+import { runFullScan } from './lib/drift-check';
 
+/**
+ * Worker bindings. The database-connection secrets are typed as `unknown`
+ * because each manifested Neon database uses a different env-var name
+ * declared in database-config.json `databases[].envVar`. They are expected
+ * to be injected via `wrangler secret put <NAME>`.
+ */
 type Bindings = {
   ENVIRONMENT: string;
   REGISTRY_KV?: KVNamespace;
-};
+} & Record<string, unknown>;
 
 const app = new Hono<{ Bindings: Bindings }>();
 
@@ -65,6 +72,10 @@ app.get('/', (c) => {
       ownerSummary: 'GET /api/owners/summary',
       ownerByTable: 'GET /api/owners/:table',
       ownerByDbTable: 'GET /api/owners/:database/:table',
+      beaconAnnounce: 'POST /api/owners/beacon',
+      beaconsList: 'GET /api/owners/beacons',
+      validateTable: 'POST /api/owners/validate',
+      tableDrift: 'GET /api/owners/:database/:table/drift',
       generatePython: 'GET /api/generate/python/:table',
       generateTypeScript: 'GET /api/generate/typescript/:table',
       generateZod: 'GET /api/generate/zod/:table',
@@ -137,4 +148,24 @@ app.onError((err, c) => {
   }, 500);
 });
 
-export default app;
+/**
+ * Default export carries both the HTTP fetch handler and the scheduled
+ * handler. The scheduled handler is invoked by the cron trigger declared in
+ * wrangler.jsonc (`triggers.crons`). It runs a full drift scan across every
+ * manifested table and emits one structured log line per table, which flows
+ * automatically to ChittyTrack via the tail_consumer binding.
+ *
+ * A single scheduled invocation is idempotent: it reads from and writes to
+ * REGISTRY_KV but never touches any Neon database that isn't explicitly
+ * configured via a secret.
+ */
+export default {
+  fetch: app.fetch,
+  async scheduled(
+    _controller: ScheduledController,
+    env: Bindings,
+    ctx: ExecutionContext
+  ): Promise<void> {
+    ctx.waitUntil(runFullScan(env));
+  },
+};
