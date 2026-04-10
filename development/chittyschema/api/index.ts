@@ -15,6 +15,7 @@ import { validateRoute } from './routes/validate';
 import { tablesRoute } from './routes/tables';
 import { generateRoute } from './routes/generate';
 import { registryRoute } from './routes/registry';
+import { ownersRoute } from './routes/owners';
 
 type Bindings = {
   ENVIRONMENT: string;
@@ -60,6 +61,10 @@ app.get('/', (c) => {
       getColumns: 'GET /api/tables/:name/columns',
       getRelationships: 'GET /api/tables/:name/relationships',
       getOwnership: 'GET /api/ownership/:service',
+      listOwners: 'GET /api/owners',
+      ownerSummary: 'GET /api/owners/summary',
+      ownerByTable: 'GET /api/owners/:table',
+      ownerByDbTable: 'GET /api/owners/:database/:table',
       generatePython: 'GET /api/generate/python/:table',
       generateTypeScript: 'GET /api/generate/typescript/:table',
       generateZod: 'GET /api/generate/zod/:table',
@@ -82,6 +87,7 @@ app.route('/api/validate', validateRoute);
 app.route('/api/tables', tablesRoute);
 app.route('/api/generate', generateRoute);
 app.route('/api/registry', registryRoute);
+app.route('/api/owners', ownersRoute);
 
 // Ownership lookup
 app.get('/api/ownership/:service', (c) => {
