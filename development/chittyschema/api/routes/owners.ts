@@ -72,6 +72,10 @@ export interface ServiceBeacon {
 type Env = {
   ENVIRONMENT?: string;
   REGISTRY_KV?: KVNamespace;
+  BEACON_STORE?: KVNamespace;
+  CANON_CACHE?: KVNamespace;
+  CANONICAL_SCHEMAS?: R2Bucket;
+  DRIFT_ARCHIVE?: R2Bucket;
 } & Record<string, unknown>;
 
 const config = dbConfig as DatabaseConfig;
@@ -185,17 +189,27 @@ app.get('/summary', (c) => {
 });
 
 /**
- * Service beacon endpoint. Any service that owns manifested tables should POST
- * here on deploy, announcing what version it's running and what migration it
- * last applied. State is keyed by service name and kept in REGISTRY_KV.
+ * Service deployment announcement endpoint. Any service that owns manifested
+ * tables should POST here on deploy, announcing what version it's running and
+ * what migration it last applied.
+ *
+ * Renamed from /beacon in PR H to disambiguate from the existing
+ * `chittybeacon` Worker (which is a health *poller*, not a deploy *receiver*).
+ * The /beacon path is kept as an alias for one release window — see below.
+ *
+ * State is keyed by service name and kept in `BEACON_STORE` KV (split out
+ * from REGISTRY_KV in PR H so the two governance surfaces stay decoupled).
  *
  * Body: { service, version, gitSha?, lastMigration?, deployedAt?, environment? }
  */
-app.post('/beacon', async (c) => {
-  const kv = c.env.REGISTRY_KV;
+async function handleAnnouncePost(c: Parameters<Parameters<typeof app.post>[1]>[0]) {
+  const kv = c.env.BEACON_STORE || c.env.REGISTRY_KV;
   if (!kv) {
     return c.json(
-      { success: false, error: 'REGISTRY_KV binding is not configured' },
+      {
+        success: false,
+        error: 'Neither BEACON_STORE nor REGISTRY_KV binding is configured',
+      },
       503
     );
   }
@@ -218,7 +232,7 @@ app.post('/beacon', async (c) => {
   }
 
   const now = new Date().toISOString();
-  const beacon: ServiceBeacon = {
+  const announcement: ServiceBeacon = {
     service: body.service,
     version: body.version,
     gitSha: body.gitSha,
@@ -228,42 +242,41 @@ app.post('/beacon', async (c) => {
     environment: body.environment || c.env.ENVIRONMENT,
   };
 
-  await kv.put(beaconKey(beacon.service), JSON.stringify(beacon));
+  await kv.put(beaconKey(announcement.service), JSON.stringify(announcement));
 
   // Emit structured event so ChittyTrack can display a "who deployed what"
-  // timeline. The beacon event is always low-priority.
+  // timeline. Low priority — informational, never alertable.
   console.log(
     JSON.stringify({
-      event: 'schema.beacon',
+      event: 'schema.deployment.announced',
       service: 'chittyschema',
       timestamp: now,
-      beacon,
+      announcement,
     })
   );
 
-  return c.json({ success: true, beacon }, 201);
-});
+  return c.json({ success: true, announcement }, 201);
+}
 
-/**
- * List the most recent beacon per service. Used by chittymonitor dashboards
- * and the "what is running where" debugging queries.
- */
-app.get('/beacons', async (c) => {
-  const kv = c.env.REGISTRY_KV;
+async function handleAnnouncementsGet(c: Parameters<Parameters<typeof app.get>[1]>[0]) {
+  const kv = c.env.BEACON_STORE || c.env.REGISTRY_KV;
   if (!kv) {
     return c.json(
-      { success: false, error: 'REGISTRY_KV binding is not configured' },
+      {
+        success: false,
+        error: 'Neither BEACON_STORE nor REGISTRY_KV binding is configured',
+      },
       503
     );
   }
 
   const list = await kv.list({ prefix: 'beacon:' });
-  const beacons: ServiceBeacon[] = [];
+  const announcements: ServiceBeacon[] = [];
   for (const key of list.keys) {
     const value = await kv.get(key.name);
     if (value) {
       try {
-        beacons.push(JSON.parse(value) as ServiceBeacon);
+        announcements.push(JSON.parse(value) as ServiceBeacon);
       } catch {
         /* skip malformed entry */
       }
@@ -273,15 +286,26 @@ app.get('/beacons', async (c) => {
   return c.json(
     {
       success: true,
-      count: beacons.length,
-      beacons: beacons.sort((a, b) =>
+      count: announcements.length,
+      announcements: announcements.sort((a, b) =>
         b.receivedAt.localeCompare(a.receivedAt)
       ),
     },
     200,
     { 'Cache-Control': 'private, max-age=15' }
   );
-});
+}
+
+// Canonical names introduced in PR H to avoid clashing with the deployed
+// `chittybeacon` worker.
+app.post('/announce', handleAnnouncePost);
+app.get('/announcements', handleAnnouncementsGet);
+
+// Backward-compatible aliases. Kept for one release window so any caller
+// from PR #6 keeps working — slated for removal in a follow-up after
+// chittymonitor switches over.
+app.post('/beacon', handleAnnouncePost);
+app.get('/beacons', handleAnnouncementsGet);
 
 /**
  * Run a drift check on demand for one manifested table. Useful for:
