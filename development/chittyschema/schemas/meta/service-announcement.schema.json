@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.chitty.cc/meta/service-announcement.schema.json",
+  "title": "ServiceAnnouncement",
+  "description": "POST body for /api/owners/announce (and the legacy /api/owners/beacon alias). Persisted in BEACON_STORE KV. Disambiguated from chittybeacon (the health-poller worker) — this is a deploy-receiver shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["service", "version"],
+  "properties": {
+    "service": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Lowercase service name. Should match an entry in canon.baseline_services if known to canon."
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Free-form version. Recommended: semver, but git short SHA is also acceptable."
+    },
+    "gitSha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{7,40}$",
+      "description": "Git commit SHA the deployment was built from."
+    },
+    "lastMigration": {
+      "type": "string",
+      "description": "Filename of the most recent migration applied (e.g. '0019_document_case_id.sql')."
+    },
+    "deployedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the deploy completed. Defaults to receivedAt if omitted."
+    },
+    "receivedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Server-side stamp; ignored on input, set by chittyschema."
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["dev", "development", "staging", "production"],
+      "description": "Deployment environment."
+    }
+  }
+}

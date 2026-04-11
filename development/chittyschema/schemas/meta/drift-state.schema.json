@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.chitty.cc/meta/drift-state.schema.json",
+  "title": "DriftState",
+  "description": "Persisted in REGISTRY_KV under key `drift:{database}:{table}` and archived to R2 bucket chittyschema-drift-archive. Output of one drift-check run for one table.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "database",
+    "table",
+    "baselineSignature",
+    "liveSignature",
+    "columnCount",
+    "status",
+    "lastCheckedAt"
+  ],
+  "properties": {
+    "database": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "table": {
+      "type": "string",
+      "pattern": "^[a-z_][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)?$"
+    },
+    "baselineSignature": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 of the canonical column form at the time the baseline was set. Null until the first successful scan."
+    },
+    "liveSignature": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "SHA-256 of the canonical column form from the most recent scan. Null if no scan has succeeded."
+    },
+    "columnCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of columns observed in the most recent scan."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "baseline_set",
+        "ok",
+        "drift",
+        "table_missing",
+        "not_configured",
+        "scan_error"
+      ],
+      "description": "baseline_set: first successful scan. ok: matches baseline. drift: differs from baseline. table_missing: information_schema.columns has no rows. not_configured: secret env var unbound. scan_error: connection or query failure."
+    },
+    "lastCheckedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "lastDriftAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Set when status transitions to drift; preserved across subsequent ok scans for forensic context."
+    },
+    "error": {
+      "type": "string",
+      "description": "Human-readable error when status is scan_error, table_missing, or not_configured."
+    },
+    "diff": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "added": { "type": "array", "items": { "type": "string" } },
+        "removed": { "type": "array", "items": { "type": "string" } },
+        "changed": { "type": "array", "items": { "type": "string" } }
+      },
+      "description": "Symbolic delta between baseline and live. Populated when status is drift."
+    }
+  }
+}

@@ -1,5 +1,6 @@
 {
-  "$comment": "ChittySchema database-config.json — Schema Owner Manifest. `databases[]` is the backward-compatible simple shape used by existing routes. `tableOwners[]` is the new rich manifest served by GET /api/owners. Every table that is authored in an owning repo must appear in tableOwners. See OPS.md for the policy.",
+  "$schema": "https://schema.chitty.cc/meta/manifest.schema.json",
+  "$comment": "ChittySchema database-config.json — Schema Owner Manifest. Self-validates against the meta-schema referenced above. `databases[]` is the backward-compatible simple shape used by existing routes. `tableOwners[]` is the rich manifest served by GET /api/owners. Every table that is authored in an owning repo must appear in tableOwners. CI rejects PRs that violate the meta-schema (npm run validate:manifest).",
   "databases": [
     {
       "name": "chittyos-core",

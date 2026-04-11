@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.chitty.cc/meta/canonical-uri.schema.json",
+  "title": "ChittyOS Canonical URI",
+  "description": "Grammar for `chittyschema://`, `chittycanon://`, `chittyapi://`, `chittyregistry://` URIs. Validates the format that resolvers across the ecosystem must accept.",
+  "type": "string",
+  "oneOf": [
+    {
+      "title": "Schema artifact",
+      "pattern": "^chittyschema://(core|meta)/[a-zA-Z0-9._/-]+(@[0-9]+\\.[0-9]+\\.[0-9]+)?$",
+      "description": "chittyschema://core/{table}@{semver} for table schemas, chittyschema://meta/{name} for meta-schemas."
+    },
+    {
+      "title": "Canon authority",
+      "pattern": "^chittycanon://(gov|core|docs)/[a-zA-Z0-9._/#-]+$",
+      "description": "chittycanon://gov/governance, chittycanon://core/types/{code}, chittycanon://docs/..."
+    },
+    {
+      "title": "API contract",
+      "pattern": "^chittyapi://svc/[a-z][a-z0-9-]*(@[0-9]+\\.[0-9]+\\.[0-9]+)?(/[a-zA-Z0-9._/-]+)?$",
+      "description": "chittyapi://svc/{service}@{semver}/{path}"
+    },
+    {
+      "title": "Registry pointer",
+      "pattern": "^chittyregistry://services/[a-z][a-z0-9-]*$",
+      "description": "chittyregistry://services/{service}"
+    }
+  ]
+}

@@ -16,9 +16,13 @@ import { tablesRoute } from './routes/tables';
 import { generateRoute } from './routes/generate';
 import { registryRoute } from './routes/registry';
 import { ownersRoute } from './routes/owners';
+import { metaRoute } from './routes/meta';
 import { checkTable } from './lib/drift-check';
 import { enqueueFullScan, type DriftScanMessage } from './lib/queue-producer';
 import { handleDriftScanBatch } from './lib/queue-consumer';
+import { validateManifest } from './lib/meta-validator';
+// @ts-expect-error JSON import
+import dbConfig from '../database-config.json';
 
 /**
  * Worker bindings. The database-connection secrets are typed as `unknown`
@@ -91,6 +95,8 @@ app.get('/', (c) => {
       announcementsList: 'GET /api/owners/announcements',
       validateTable: 'POST /api/owners/validate',
       tableDrift: 'GET /api/owners/:database/:table/drift',
+      listMetaSchemas: 'GET /meta',
+      getMetaSchema: 'GET /meta/:name',
       generatePython: 'GET /api/generate/python/:table',
       generateTypeScript: 'GET /api/generate/typescript/:table',
       generateZod: 'GET /api/generate/zod/:table',
@@ -108,12 +114,40 @@ app.get('/', (c) => {
   });
 });
 
+// Cold-start guard: validate the bundled manifest against its meta-schema
+// before serving any traffic. If the manifest is structurally invalid we
+// return 503 from every route until the build is corrected. Loud failure
+// is the whole point of meta-validation.
+const manifestValidation = validateManifest(dbConfig);
+if (!manifestValidation.valid) {
+  console.error(
+    JSON.stringify({
+      event: 'schema.meta.manifest_invalid',
+      service: 'chittyschema',
+      timestamp: new Date().toISOString(),
+      errorCount: manifestValidation.errors.length,
+      errors: manifestValidation.errors.slice(0, 10),
+    })
+  );
+  app.all('*', (c) =>
+    c.json(
+      {
+        success: false,
+        error: 'database-config.json failed meta-schema validation at cold start',
+        validation: manifestValidation,
+      },
+      503
+    )
+  );
+}
+
 // API Routes
 app.route('/api/validate', validateRoute);
 app.route('/api/tables', tablesRoute);
 app.route('/api/generate', generateRoute);
 app.route('/api/registry', registryRoute);
 app.route('/api/owners', ownersRoute);
+app.route('/meta', metaRoute);
 
 // Ownership lookup
 app.get('/api/ownership/:service', (c) => {
