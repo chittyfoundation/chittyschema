@@ -49,6 +49,7 @@
   "author": "Chitty Foundation",
   "license": "MIT",
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.0",
     "hono": "^4.0.0",
     "pg": "^8.11.3",
     "zod": "^3.22.4"
