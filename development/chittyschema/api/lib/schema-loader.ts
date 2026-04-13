@@ -184,7 +184,7 @@ function inferZodType(z: any): string | undefined {
  */
 function getTableDescription(tableName: string): string {
   const descriptions: Record<string, string> = {
-    'trust_scores': 'ChittyScore: 6D behavioral trust scoring with dimension analysis',
+    'trust_scores': 'ChittyTrust: TY/VY/RY reckoning cache for downstream trust reads',
     'trust_events': 'ChittyScore: Event history that affects trust scores',
     'trust_networks': 'ChittyScore: Graph of trust relationships between identities',
     'identities': 'ChittyID: Core identity records with DID and biometric data',
