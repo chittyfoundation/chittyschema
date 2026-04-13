@@ -1,12 +1,23 @@
 // chittyschema-api — Cloudflare Workers configuration
 //
-// The ongoing validation loop requires:
-//   - triggers.crons: hourly drift scan across manifested tables
-//   - tail_consumers: route structured logs to ChittyTrack at track.chitty.cc
-//   - Database URL secrets per manifested Neon database (see list below)
+// PR H wires the full Cloudflare-native ongoing validation loop:
+//   - triggers.crons: hourly drift scan (cron → enqueueFullScan → DRIFT_QUEUE)
+//   - tail_consumers: structured logs to ChittyTrack at track.chitty.cc
+//   - kv_namespaces:
+//       REGISTRY_KV   — pre-existing service-registration KV (PR #5)
+//       BEACON_STORE  — service deployment announcements (PR H)
+//       CANON_CACHE   — cached canon.chitty.cc ontology (PR H, awaits PR C)
+//   - r2_buckets:
+//       CANONICAL_SCHEMAS — JSON Schemas served at /meta/* (PR H, used by PR J)
+//       DRIFT_ARCHIVE     — compliance retention for drift events (PR H)
+//   - queues:
+//       producer DRIFT_QUEUE → chittyschema-drift-scan (cron fan-out)
+//       consumer chittyschema-drift-scan → handleDriftScanBatch
+//       DLQ chittyschema-drift-scan-dlq for persistent failures
 //
-// Secrets are injected via `wrangler secret put` — NOT declared here.
-// The manifested env var names are (from database-config.json):
+// Database URL secrets per manifested Neon database are injected via
+// `wrangler secret put` — NOT declared here. The manifested env var names
+// (from database-config.json `databases[].envVar`):
 //   CHITTYOS_CORE_DB_URL        → chittyos-core
 //   CHITTYLEDGER_DB_URL         → chittyledger
 //   CHITTYCANON_DB_URL          → chittycanon
@@ -16,9 +27,8 @@
 //   CHITTYCONNECT_DB_URL        → chittyconnect
 //   CHITTYDISPUTE_DB_URL        → chittydispute
 //
-// Any DB whose secret is not bound will emit `schema.scan.skip` events
-// with `reason: "not_configured"` — these are real, actionable signals,
-// not stubs.
+// Any DB whose secret is not bound emits `schema.scan.skip` events with
+// `reason: "not_configured"` — these are real, actionable signals, not stubs.
 {
   "name": "chittyschema-api",
   "main": "api/index.ts",
@@ -42,8 +52,43 @@
     {
       "binding": "REGISTRY_KV",
       "id": "c242ebbe796d4099b16c96dd687c0229"
+    },
+    {
+      "binding": "BEACON_STORE",
+      "id": "6978cc9c588d48f383a934fb3df9eed3"
+    },
+    {
+      "binding": "CANON_CACHE",
+      "id": "c006b33782094997a1f94b02eb99535a"
     }
   ],
+  "r2_buckets": [
+    {
+      "binding": "CANONICAL_SCHEMAS",
+      "bucket_name": "chittyschema-canonical-schemas"
+    },
+    {
+      "binding": "DRIFT_ARCHIVE",
+      "bucket_name": "chittyschema-drift-archive"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "DRIFT_QUEUE",
+        "queue": "chittyschema-drift-scan"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "chittyschema-drift-scan",
+        "max_batch_size": 25,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "dead_letter_queue": "chittyschema-drift-scan-dlq"
+      }
+    ]
+  },
   "triggers": {
     "crons": [
       "0 * * * *"

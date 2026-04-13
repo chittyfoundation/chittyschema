@@ -16,17 +16,32 @@ import { tablesRoute } from './routes/tables';
 import { generateRoute } from './routes/generate';
 import { registryRoute } from './routes/registry';
 import { ownersRoute } from './routes/owners';
-import { runFullScan } from './lib/drift-check';
+import { checkTable } from './lib/drift-check';
+import { enqueueFullScan, type DriftScanMessage } from './lib/queue-producer';
+import { handleDriftScanBatch } from './lib/queue-consumer';
 
 /**
  * Worker bindings. The database-connection secrets are typed as `unknown`
  * because each manifested Neon database uses a different env-var name
  * declared in database-config.json `databases[].envVar`. They are expected
  * to be injected via `wrangler secret put <NAME>`.
+ *
+ * Cloudflare resources (provisioned via the platform, not via secrets):
+ *   REGISTRY_KV         — existing service-registration KV (PR #5 baseline)
+ *   BEACON_STORE        — service deployment announcements (PR H)
+ *   CANON_CACHE         — cached canon.chitty.cc ontology (PR H, awaits PR C)
+ *   CANONICAL_SCHEMAS   — R2 bucket for JSON Schemas served at /meta/* (PR H+J)
+ *   DRIFT_ARCHIVE       — R2 bucket for compliance drift retention (PR H)
+ *   DRIFT_QUEUE         — Cloudflare Queue producer for fan-out scans (PR H)
  */
 type Bindings = {
   ENVIRONMENT: string;
   REGISTRY_KV?: KVNamespace;
+  BEACON_STORE?: KVNamespace;
+  CANON_CACHE?: KVNamespace;
+  CANONICAL_SCHEMAS?: R2Bucket;
+  DRIFT_ARCHIVE?: R2Bucket;
+  DRIFT_QUEUE?: Queue<DriftScanMessage>;
 } & Record<string, unknown>;
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -72,8 +87,8 @@ app.get('/', (c) => {
       ownerSummary: 'GET /api/owners/summary',
       ownerByTable: 'GET /api/owners/:table',
       ownerByDbTable: 'GET /api/owners/:database/:table',
-      beaconAnnounce: 'POST /api/owners/beacon',
-      beaconsList: 'GET /api/owners/beacons',
+      announceDeployment: 'POST /api/owners/announce',
+      announcementsList: 'GET /api/owners/announcements',
       validateTable: 'POST /api/owners/validate',
       tableDrift: 'GET /api/owners/:database/:table/drift',
       generatePython: 'GET /api/generate/python/:table',
@@ -149,23 +164,39 @@ app.onError((err, c) => {
 });
 
 /**
- * Default export carries both the HTTP fetch handler and the scheduled
- * handler. The scheduled handler is invoked by the cron trigger declared in
- * wrangler.jsonc (`triggers.crons`). It runs a full drift scan across every
- * manifested table and emits one structured log line per table, which flows
- * automatically to ChittyTrack via the tail_consumer binding.
+ * Default export carries three handlers:
  *
- * A single scheduled invocation is idempotent: it reads from and writes to
- * REGISTRY_KV but never touches any Neon database that isn't explicitly
- * configured via a secret.
+ *   fetch     — HTTP request handler (the Hono app)
+ *   scheduled — cron-triggered fan-out (publishes one queue message per
+ *               manifested table; the queue handler does the real work)
+ *   queue     — drains the DRIFT_QUEUE; per-message drift checks with
+ *               automatic retries and DLQ routing
+ *
+ * The scheduled→queue split means a single hourly tick takes seconds (not
+ * minutes), individual table failures don't block the scan, and Cloudflare
+ * Queues handles backpressure + retries for free. If DRIFT_QUEUE is unbound
+ * (e.g. local dev), `enqueueFullScan` falls back to inline iteration via
+ * `checkTable` so the cron stays useful.
  */
 export default {
   fetch: app.fetch,
+
   async scheduled(
     _controller: ScheduledController,
     env: Bindings,
     ctx: ExecutionContext
   ): Promise<void> {
-    ctx.waitUntil(runFullScan(env));
+    ctx.waitUntil(
+      enqueueFullScan(env, 'cron', async (database, table) => {
+        await checkTable(env, database, table);
+      })
+    );
+  },
+
+  async queue(
+    batch: MessageBatch<DriftScanMessage>,
+    env: Bindings
+  ): Promise<void> {
+    await handleDriftScanBatch(batch, env);
   },
 };
