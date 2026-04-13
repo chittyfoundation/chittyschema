@@ -30,7 +30,7 @@
 // Any DB whose secret is not bound emits `schema.scan.skip` events with
 // `reason: "not_configured"` — these are real, actionable signals, not stubs.
 {
-  "name": "chittyschema-api",
+  "name": "chittyschema",
   "main": "api/index.ts",
   "compatibility_date": "2026-03-16",
   "compatibility_flags": [
