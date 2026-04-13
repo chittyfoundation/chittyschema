@@ -53,7 +53,7 @@ const app = new Hono<{ Bindings: Bindings }>();
 // Middleware
 app.use('*', logger());
 app.use('*', cors({
-  origin: ['https://chitty.cc', 'https://*.chitty.cc', 'https://*.replit.app'],
+  origin: ['https://chitty.cc', 'https://*.chitty.cc'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   exposeHeaders: ['X-Request-ID'],
@@ -61,14 +61,37 @@ app.use('*', cors({
   credentials: true
 }));
 
-// Health check
-app.get('/api/health', (c) => {
-  return c.json({
+// Health check — served at both /health (ChittyOS standard) and /api/health (legacy).
+const healthHandler = (c: any) =>
+  c.json({
     status: 'ok',
     service: 'chittyschema',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
-    environment: c.env.ENVIRONMENT || 'development'
+    environment: c.env.ENVIRONMENT || 'development',
+  });
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
+
+// Service status metadata — ChittyOS standard GET /api/v1/status
+app.get('/api/v1/status', (c) => {
+  return c.json({
+    service: 'chittyschema',
+    canonicalUri: 'chittycanon://core/services/chitty-schema',
+    tier: 0,
+    domain: 'schema.chitty.cc',
+    version: '1.0.0',
+    environment: c.env.ENVIRONMENT || 'development',
+    stack: 'Hono + Cloudflare Workers',
+    bindings: {
+      REGISTRY_KV: !!c.env.REGISTRY_KV,
+      BEACON_STORE: !!c.env.BEACON_STORE,
+      CANON_CACHE: !!c.env.CANON_CACHE,
+      CANONICAL_SCHEMAS: !!c.env.CANONICAL_SCHEMAS,
+      DRIFT_ARCHIVE: !!c.env.DRIFT_ARCHIVE,
+      DRIFT_QUEUE: !!c.env.DRIFT_QUEUE,
+    },
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -79,7 +102,9 @@ app.get('/', (c) => {
     description: 'Runtime schema validation and type generation for ChittyOS',
     version: '1.0.0',
     endpoints: {
-      health: 'GET /api/health',
+      health: 'GET /health',
+      healthLegacy: 'GET /api/health',
+      status: 'GET /api/v1/status',
       validate: 'POST /api/validate',
       validateBulk: 'POST /api/validate/bulk',
       listTables: 'GET /api/tables',

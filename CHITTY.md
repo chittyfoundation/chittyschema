@@ -1,7 +1,7 @@
 ---
 uri: chittycanon://docs/ops/architecture/chitty-schema
 namespace: chittycanon://docs/ops
-type: summary
+type: architecture
 version: 1.0.0
 status: DRAFT
 registered_with: chittycanon://core/services/canon
@@ -23,8 +23,11 @@ Schema governance service for the ChittyOS ecosystem. Serves callable schema def
 Schema service deployed at schema.chitty.cc. Consumes ontology from ChittyCanon and publishes runtime-queryable schemas. Supports drift detection across services.
 
 ### Stack
-- **Runtime**: Cloudflare Workers (planned)
-- **Package**: `@chittyfoundation/ontology`
+- **Runtime**: Cloudflare Workers (Hono)
+- **Package**: `@chittyos/schema` (published to GitHub npm registry)
+- **Database**: Neon PostgreSQL (introspection via `@neondatabase/serverless`)
+- **Validation**: Zod (runtime) + Ajv (meta-schema)
+- **Observability**: ChittyTrack via tail consumer
 
 ### Ontology Stack
 ```
@@ -74,11 +77,21 @@ All Services (validate at runtime)
 ### Endpoints
 | Path | Method | Auth | Purpose |
 |------|--------|------|---------|
-| `/health` | GET | No | Health check |
-| `/api/v1/schemas` | GET | No | List available schemas |
-| `/api/v1/schemas/:type` | GET | No | Get schema for entity type |
-| `/api/v1/validate` | POST | Yes | Validate data against schema |
-| `/api/v1/drift` | POST | Yes | Detect schema drift |
+| `/health` | GET | No | Health check (ChittyOS standard) |
+| `/api/v1/status` | GET | No | Service metadata + binding status |
+| `/api/tables` | GET | No | List all manifested tables with ownership |
+| `/api/owners` | GET | No | Schema Owner Manifest (filterable) |
+| `/api/owners/summary` | GET | No | Rollup by database/service/canonType |
+| `/api/owners/:table` | GET | No | Single-table ownership lookup |
+| `/api/owners/:database/:table/drift` | GET | No | Latest drift state from KV |
+| `/api/owners/validate` | POST | No | On-demand drift check |
+| `/api/owners/announce` | POST | No | Service deployment announcement |
+| `/api/owners/announcements` | GET | No | List deployment announcements |
+| `/api/validate` | POST | No | Validate data against schema |
+| `/meta` | GET | No | List meta-schemas |
+| `/meta/:name` | GET | No | Serve meta-schema (JSON Schema 2020-12) |
+| `/api/generate/:lang/:table` | GET | No | Generate types |
+| `/api/registry` | GET | No | Schema registry entries |
 
 ## Document Triad
 

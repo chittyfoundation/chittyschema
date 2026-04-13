@@ -63,11 +63,21 @@ Source: `chittycanon://gov/governance#three-aspects`
 ### Core Endpoints
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/health` | GET | Health check |
-| `/api/v1/schemas` | GET | List available schemas |
-| `/api/v1/schemas/:type` | GET | Get schema for entity type |
-| `/api/v1/validate` | POST | Validate data against schema |
-| `/api/v1/drift` | POST | Detect schema drift between services |
+| `/health` | GET | Health check (ChittyOS standard) |
+| `/api/v1/status` | GET | Service metadata + binding status |
+| `/api/tables` | GET | List all manifested tables with ownership |
+| `/api/owners` | GET | Schema Owner Manifest (filterable by database/service/canonType/legalHold) |
+| `/api/owners/summary` | GET | Rollup counts by database, service, canonType |
+| `/api/owners/:table` | GET | Single-table ownership lookup (collision-aware) |
+| `/api/owners/:database/:table/drift` | GET | Latest drift state from KV |
+| `/api/owners/validate` | POST | On-demand drift check for one manifested table |
+| `/api/owners/announce` | POST | Service deployment announcement |
+| `/api/owners/announcements` | GET | List all deployment announcements |
+| `/api/validate` | POST | Validate data against schema |
+| `/meta` | GET | List available meta-schemas |
+| `/meta/:name` | GET | Serve single meta-schema (JSON Schema 2020-12) |
+| `/api/generate/:lang/:table` | GET | Generate types for python/typescript/zod |
+| `/api/registry` | GET | Schema registry entries |
 
 ## Ownership
 
