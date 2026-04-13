@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.chitty.cc/meta/table-owner.schema.json",
+  "title": "TableOwner",
+  "description": "Single entry in the ChittySchema Owner Manifest. Extracted from manifest.schema.json so consumers can validate one entry at a time without loading the full manifest schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "table",
+    "database",
+    "service",
+    "repo",
+    "authoringFile",
+    "semver",
+    "legalHold"
+  ],
+  "properties": {
+    "table": {
+      "type": "string",
+      "pattern": "^[a-z_][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)?$"
+    },
+    "database": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "service": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$|^shared$"
+    },
+    "repo": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9-]+/[a-z][a-z0-9-]*$"
+    },
+    "authoringFile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "canonType": {
+      "type": "string",
+      "enum": ["P", "L", "T", "E", "A"]
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "legalHold": { "type": "boolean" },
+    "stewards": {
+      "type": "string",
+      "pattern": "^@[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"
+    },
+    "notes": { "type": "string" }
+  }
+}

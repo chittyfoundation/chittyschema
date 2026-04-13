@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.chitty.cc/meta/manifest.schema.json",
+  "title": "ChittySchema Owner Manifest",
+  "description": "Meta-schema for development/chittyschema/database-config.json. Validates the entire Schema Owner Manifest including the legacy databases[] simple shape and the rich tableOwners[] registry. This file is the contract between PR #5 (manifest) and every consumer of /api/owners.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["databases", "tableOwners"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "Self-identifies the manifest as conforming to this meta-schema. Should be 'chittyschema://meta/manifest.schema.json' or the equivalent HTTPS URL."
+    },
+    "$comment": {
+      "type": "string",
+      "description": "Free-form documentation. Not validated."
+    },
+    "databases": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Backward-compatible simple shape (PR #5). Each entry declares a Neon/Postgres database, the env var carrying its connection URL, the services that use it, and a flat table → owner-service map.",
+      "items": { "$ref": "#/$defs/Database" }
+    },
+    "tableOwners": {
+      "type": "array",
+      "minItems": 0,
+      "description": "Rich manifest (PR #5). The canonical answer to 'who owns this table?' across the ChittyOS ecosystem. Each entry must reference a database declared in `databases[]`.",
+      "items": { "$ref": "#/$defs/TableOwner" }
+    }
+  },
+  "$defs": {
+    "Database": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description", "envVar", "owner", "services", "tables"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Lowercase, hyphen-separated database identifier (e.g. 'chittyledger', 'chittyevidence-db')."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One-line human-readable description."
+        },
+        "envVar": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*_DB_URL$",
+          "description": "Name of the env var carrying the connection string. MUST end in `_DB_URL` and be UPPER_SNAKE_CASE. Bound at runtime via `wrangler secret put`."
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable owning team or service group."
+        },
+        "services": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "minItems": 1,
+          "description": "Services that read from or write to this database."
+        },
+        "tables": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$",
+            "description": "Owning service name."
+          },
+          "description": "Flat table-name → owning-service map (the legacy shape used by tables.ts)."
+        }
+      }
+    },
+    "TableOwner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "table",
+        "database",
+        "service",
+        "repo",
+        "authoringFile",
+        "semver",
+        "legalHold"
+      ],
+      "properties": {
+        "table": {
+          "type": "string",
+          "pattern": "^[a-z_][a-z0-9_]*(\\.[a-z_][a-z0-9_]*)?$",
+          "description": "SQL table identifier. Optionally schema-qualified (e.g. 'public.users' or 'canon.policies'). Defaults to 'public' schema."
+        },
+        "database": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Must reference a `databases[].name` value."
+        },
+        "service": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$|^shared$",
+          "description": "Authoring service name. 'shared' is a sentinel for cross-cutting tables like audit_logs."
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9-]+/[a-z][a-z0-9-]*$",
+          "description": "GitHub repo of the form ORG/repo, e.g. CHITTYFOUNDATION/chittyledger."
+        },
+        "authoringFile": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path within the authoring repo where the migration SQL or Drizzle definition lives. May start with '(TBD' to indicate intentionally tracked but not-yet-located authoring files."
+        },
+        "canonType": {
+          "type": "string",
+          "enum": ["P", "L", "T", "E", "A"],
+          "description": "P/L/T/E/A canonical entity type per chittycanon://gov/governance. Validated against canon.chitty.cc/api/ontology at runtime when canon is reachable."
+        },
+        "semver": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "description": "Strict semver MAJOR.MINOR.PATCH for the schema of this table. Bumps on shape change."
+        },
+        "legalHold": {
+          "type": "boolean",
+          "description": "If true, this table is chain-of-custody critical. Drift triggers a `schema.drift.legal_hold` event (alertable). Future legal-freeze mode blocks any schema change without explicit override."
+        },
+        "stewards": {
+          "type": "string",
+          "pattern": "^@[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$",
+          "description": "GitHub team handle for schema review (e.g. '@chittyfoundation/ledger')."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Free-form note. Used to document namespace collisions and intentional special cases."
+        }
+      }
+    }
+  }
+}

@@ -23,6 +23,7 @@
     "generate:docs": "tsx scripts/generate-docs-multi.ts",
     "generate:docs:single": "tsx scripts/generate-docs.ts",
     "validate": "tsx scripts/validate-schema.ts",
+    "validate:manifest": "tsx scripts/validate-manifest.ts",
     "validate:service": "tsx scripts/validate-service-compliance.ts",
     "certify": "tsx scripts/validate-service-compliance.ts",
     "migration:create": "tsx scripts/create-migration.ts",
@@ -50,6 +51,8 @@
   "license": "MIT",
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "hono": "^4.0.0",
     "pg": "^8.11.3",
     "zod": "^3.22.4"

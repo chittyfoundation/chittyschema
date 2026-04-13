@@ -28,6 +28,7 @@ import {
   beaconKey,
   type DriftState,
 } from '../lib/drift-check';
+import { validate as validateMeta } from '../lib/meta-validator';
 
 export interface TableOwner {
   table: string;
@@ -221,11 +222,15 @@ async function handleAnnouncePost(c: Parameters<Parameters<typeof app.post>[1]>[
     return c.json({ success: false, error: 'Invalid JSON body' }, 400);
   }
 
-  if (!body.service || !body.version) {
+  // Meta-schema validation: enforce service-announcement.schema.json on
+  // every incoming request. Replaces the ad-hoc field check from PR H.
+  const announceValidation = validateMeta('service-announcement', body);
+  if (!announceValidation.valid) {
     return c.json(
       {
         success: false,
-        error: 'Required fields: service, version',
+        error: 'service-announcement schema validation failed',
+        validation: announceValidation,
       },
       400
     );
@@ -233,8 +238,8 @@ async function handleAnnouncePost(c: Parameters<Parameters<typeof app.post>[1]>[
 
   const now = new Date().toISOString();
   const announcement: ServiceBeacon = {
-    service: body.service,
-    version: body.version,
+    service: body.service!,
+    version: body.version!,
     gitSha: body.gitSha,
     lastMigration: body.lastMigration,
     deployedAt: body.deployedAt || now,

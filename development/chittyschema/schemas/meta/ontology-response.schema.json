@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.chitty.cc/meta/ontology-response.schema.json",
+  "title": "Canon Ontology Response",
+  "description": "Expected shape returned by canon.chitty.cc/api/ontology. Used by chittyschema's canon-client to validate responses before caching them. The fallback hardcoded P/L/T/E/A list also conforms to this shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "source", "generatedAt", "types"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Version identifier for this ontology snapshot. SHOULD be semver but the fallback uses 'fallback-0.0.0'."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["live", "cache", "stale-cache", "local-fallback"],
+      "description": "Where the snapshot came from. Set by chittyschema's canon-client; canon should return 'live'."
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "types": {
+      "type": "array",
+      "minItems": 5,
+      "description": "Canonical entity types. MUST include all five P/L/T/E/A core types per chittycanon://gov/governance.",
+      "items": { "$ref": "#/$defs/CanonType" }
+    }
+  },
+  "$defs": {
+    "CanonType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "name"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4,
+          "description": "Short type code. The five core codes are P/L/T/E/A; canon may add subtype codes in future."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable name (e.g. 'Person')."
+        },
+        "description": { "type": "string" },
+        "subtypes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Optional sub-classification (e.g. for Person: Natural / Synthetic / Legal)."
+        }
+      }
+    }
+  }
+}

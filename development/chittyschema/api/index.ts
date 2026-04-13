@@ -16,9 +16,13 @@ import { tablesRoute } from './routes/tables';
 import { generateRoute } from './routes/generate';
 import { registryRoute } from './routes/registry';
 import { ownersRoute } from './routes/owners';
+import { metaRoute } from './routes/meta';
 import { checkTable } from './lib/drift-check';
 import { enqueueFullScan, type DriftScanMessage } from './lib/queue-producer';
 import { handleDriftScanBatch } from './lib/queue-consumer';
+import { validateManifest } from './lib/meta-validator';
+// @ts-expect-error JSON import
+import dbConfig from '../database-config.json';
 
 /**
  * Worker bindings. The database-connection secrets are typed as `unknown`
@@ -49,7 +53,7 @@ const app = new Hono<{ Bindings: Bindings }>();
 // Middleware
 app.use('*', logger());
 app.use('*', cors({
-  origin: ['https://chitty.cc', 'https://*.chitty.cc', 'https://*.replit.app'],
+  origin: ['https://chitty.cc', 'https://*.chitty.cc'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   exposeHeaders: ['X-Request-ID'],
@@ -57,14 +61,37 @@ app.use('*', cors({
   credentials: true
 }));
 
-// Health check
-app.get('/api/health', (c) => {
-  return c.json({
+// Health check — served at both /health (ChittyOS standard) and /api/health (legacy).
+const healthHandler = (c: any) =>
+  c.json({
     status: 'ok',
     service: 'chittyschema',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
-    environment: c.env.ENVIRONMENT || 'development'
+    environment: c.env.ENVIRONMENT || 'development',
+  });
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
+
+// Service status metadata — ChittyOS standard GET /api/v1/status
+app.get('/api/v1/status', (c) => {
+  return c.json({
+    service: 'chittyschema',
+    canonicalUri: 'chittycanon://core/services/chitty-schema',
+    tier: 0,
+    domain: 'schema.chitty.cc',
+    version: '1.0.0',
+    environment: c.env.ENVIRONMENT || 'development',
+    stack: 'Hono + Cloudflare Workers',
+    bindings: {
+      REGISTRY_KV: !!c.env.REGISTRY_KV,
+      BEACON_STORE: !!c.env.BEACON_STORE,
+      CANON_CACHE: !!c.env.CANON_CACHE,
+      CANONICAL_SCHEMAS: !!c.env.CANONICAL_SCHEMAS,
+      DRIFT_ARCHIVE: !!c.env.DRIFT_ARCHIVE,
+      DRIFT_QUEUE: !!c.env.DRIFT_QUEUE,
+    },
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -75,7 +102,9 @@ app.get('/', (c) => {
     description: 'Runtime schema validation and type generation for ChittyOS',
     version: '1.0.0',
     endpoints: {
-      health: 'GET /api/health',
+      health: 'GET /health',
+      healthLegacy: 'GET /api/health',
+      status: 'GET /api/v1/status',
       validate: 'POST /api/validate',
       validateBulk: 'POST /api/validate/bulk',
       listTables: 'GET /api/tables',
@@ -91,6 +120,8 @@ app.get('/', (c) => {
       announcementsList: 'GET /api/owners/announcements',
       validateTable: 'POST /api/owners/validate',
       tableDrift: 'GET /api/owners/:database/:table/drift',
+      listMetaSchemas: 'GET /meta',
+      getMetaSchema: 'GET /meta/:name',
       generatePython: 'GET /api/generate/python/:table',
       generateTypeScript: 'GET /api/generate/typescript/:table',
       generateZod: 'GET /api/generate/zod/:table',
@@ -108,12 +139,40 @@ app.get('/', (c) => {
   });
 });
 
+// Cold-start guard: validate the bundled manifest against its meta-schema
+// before serving any traffic. If the manifest is structurally invalid we
+// return 503 from every route until the build is corrected. Loud failure
+// is the whole point of meta-validation.
+const manifestValidation = validateManifest(dbConfig);
+if (!manifestValidation.valid) {
+  console.error(
+    JSON.stringify({
+      event: 'schema.meta.manifest_invalid',
+      service: 'chittyschema',
+      timestamp: new Date().toISOString(),
+      errorCount: manifestValidation.errors.length,
+      errors: manifestValidation.errors.slice(0, 10),
+    })
+  );
+  app.all('*', (c) =>
+    c.json(
+      {
+        success: false,
+        error: 'database-config.json failed meta-schema validation at cold start',
+        validation: manifestValidation,
+      },
+      503
+    )
+  );
+}
+
 // API Routes
 app.route('/api/validate', validateRoute);
 app.route('/api/tables', tablesRoute);
 app.route('/api/generate', generateRoute);
 app.route('/api/registry', registryRoute);
 app.route('/api/owners', ownersRoute);
+app.route('/meta', metaRoute);
 
 // Ownership lookup
 app.get('/api/ownership/:service', (c) => {

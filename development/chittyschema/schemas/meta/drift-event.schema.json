@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.chitty.cc/meta/drift-event.schema.json",
+  "title": "ChittySchema Structured Event",
+  "description": "All `console.log` lines emitted by chittyschema and routed to chittytrack via the tail consumer. Every event is a single JSON object so chittytrack's tail handler can parse without pattern matching. Use the `event` discriminator to dispatch.",
+  "type": "object",
+  "required": ["event", "service", "timestamp"],
+  "properties": {
+    "event": {
+      "type": "string",
+      "enum": [
+        "schema.scan.start",
+        "schema.scan.finish",
+        "schema.scan.enqueued",
+        "schema.scan.no_queue",
+        "schema.scan.inline_fallback",
+        "schema.scan.inline_error",
+        "schema.scan.message_done",
+        "schema.scan.message_error",
+        "schema.scan.skip",
+        "schema.scan.error",
+        "schema.scan.table_missing",
+        "schema.baseline_set",
+        "schema.ok",
+        "schema.drift",
+        "schema.drift.legal_hold",
+        "schema.deployment.announced",
+        "schema.beacon",
+        "schema.canon.refresh",
+        "schema.canon.stale",
+        "schema.canon.offline",
+        "schema.canon.fetch_error",
+        "schema.archive.stored"
+      ]
+    },
+    "service": {
+      "type": "string",
+      "const": "chittyschema",
+      "description": "Producer service. Always 'chittyschema'."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "scanId": {
+      "type": "string",
+      "pattern": "^scan-[a-z0-9]+-[a-z0-9]+$",
+      "description": "Set when the event belongs to a queue-fanned-out scan. Groups all messages from one cron tick."
+    },
+    "database": { "type": "string" },
+    "table": { "type": "string" },
+    "status": { "type": "string" },
+    "columnCount": { "type": "integer" },
+    "liveSignature": { "type": "string" },
+    "legalHold": { "type": "boolean" },
+    "trigger": {
+      "type": "string",
+      "enum": ["cron", "manual", "webhook", "beacon"]
+    },
+    "error": { "type": "string" },
+    "reason": { "type": "string" },
+    "version": { "type": "string" },
+    "cachedVersion": { "type": "string" },
+    "cachedAt": { "type": "string", "format": "date-time" },
+    "key": { "type": "string" },
+    "fallback": { "type": "string" },
+    "count": { "type": "integer" },
+    "tables": { "type": "integer" }
+  },
+  "additionalProperties": true
+}
