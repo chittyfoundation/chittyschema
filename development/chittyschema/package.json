@@ -25,6 +25,7 @@
     "validate": "tsx scripts/validate-schema.ts",
     "validate:manifest": "tsx scripts/validate-manifest.ts",
     "validate:service": "tsx scripts/validate-service-compliance.ts",
+    "validate:portfolio-ownership": "tsx scripts/validate-portfolio-ownership.ts",
     "certify": "tsx scripts/validate-service-compliance.ts",
     "migration:create": "tsx scripts/create-migration.ts",
     "migration:apply": "tsx scripts/apply-migration.ts",

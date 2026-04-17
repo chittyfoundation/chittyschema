@@ -34,6 +34,10 @@ import driftEventSchema from '../../schemas/meta/drift-event.schema.json';
 import ontologyResponseSchema from '../../schemas/meta/ontology-response.schema.json';
 // @ts-expect-error JSON imports
 import canonicalUriSchema from '../../schemas/meta/canonical-uri.schema.json';
+// @ts-expect-error JSON imports
+import portfolioOwnersSchema from '../../schemas/meta/portfolio-owners.schema.json';
+// @ts-expect-error JSON imports
+import repoRequirementsSchema from '../../schemas/meta/repo-requirements.schema.json';
 
 export type MetaSchemaName =
   | 'manifest'
@@ -42,7 +46,9 @@ export type MetaSchemaName =
   | 'service-announcement'
   | 'drift-event'
   | 'ontology-response'
-  | 'canonical-uri';
+  | 'canonical-uri'
+  | 'portfolio-owners'
+  | 'repo-requirements';
 
 export const META_SCHEMAS: Record<MetaSchemaName, unknown> = {
   manifest: manifestSchema,
@@ -52,6 +58,8 @@ export const META_SCHEMAS: Record<MetaSchemaName, unknown> = {
   'drift-event': driftEventSchema,
   'ontology-response': ontologyResponseSchema,
   'canonical-uri': canonicalUriSchema,
+  'portfolio-owners': portfolioOwnersSchema,
+  'repo-requirements': repoRequirementsSchema,
 };
 
 const ajv = new Ajv2020({
@@ -73,7 +81,10 @@ const validators: Record<MetaSchemaName, ValidateFunction> = {
   'drift-event': ajv.compile(driftEventSchema as object),
   'ontology-response': ajv.compile(ontologyResponseSchema as object),
   'canonical-uri': ajv.compile(canonicalUriSchema as object),
+  'portfolio-owners': ajv.compile(portfolioOwnersSchema as object),
+  'repo-requirements': ajv.compile(repoRequirementsSchema as object),
 };
+
 
 export interface ValidationResult {
   valid: boolean;

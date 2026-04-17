@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Portfolio Ownership Registry",
+  "description": "Canonical mapping of GitHub CODEOWNERS principals to ChittyEntities (ChittyID) with TY/VY/RY capability vectors (given/earned).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "generated_at", "principals"],
+  "properties": {
+    "version": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date" },
+    "principals": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/principal" }
+    }
+  },
+  "$defs": {
+    "capabilityTerm": { "type": "string", "minLength": 1 },
+    "capabilityGrant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["term", "authority", "decision", "granted_at", "expires_at"],
+      "properties": {
+        "term": { "$ref": "#/$defs/capabilityTerm" },
+        "authority": { "type": "string", "minLength": 1 },
+        "decision": { "type": "string", "minLength": 1 },
+        "granted_at": { "type": "string", "format": "date" },
+        "expires_at": { "type": "string", "format": "date" }
+      }
+    },
+    "capabilityEarned": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["term"],
+      "properties": {
+        "term": { "$ref": "#/$defs/capabilityTerm" },
+        "evidence": { "type": "string" }
+      }
+    },
+    "capabilityVector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["given", "earned"],
+      "properties": {
+        "given": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/capabilityGrant" }
+        },
+        "earned": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/capabilityEarned" }
+        }
+      }
+    },
+    "principal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["github", "chittyid", "entity_type", "roles"],
+      "properties": {
+        "github": { "type": "string", "pattern": "^@" },
+        "chittyid": { "type": "string", "minLength": 1 },
+        "entity_type": { "type": "string", "enum": ["P", "L", "T", "E", "A"] },
+        "characterization": { "type": "string", "enum": ["natural", "synthetic"] },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "ty": { "$ref": "#/$defs/capabilityVector" },
+        "vy": { "$ref": "#/$defs/capabilityVector" },
+        "ry": { "$ref": "#/$defs/capabilityVector" }
+      }
+    }
+  }
+}
+
