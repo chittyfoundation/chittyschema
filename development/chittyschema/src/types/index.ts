@@ -8,5 +8,6 @@
  * const identity: chittyos_core.Identities = { ... };
  */
 
+export * as chittyfinance from './chittyfinance/index.js';
 export * as chittyledger from './chittyledger/index.js';
 export * as chittyos_core from './chittyos-core/index.js';
