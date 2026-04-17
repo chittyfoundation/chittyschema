@@ -13,7 +13,7 @@
 -- with scope_artifacts, wider scope_type vocabulary, and chittyos-core
 -- naming conventions.
 --
--- Consumers: chitty-stream-canon (live_stream_session), ChittyEvidence
+-- Consumers: chittystream-canon (live_stream_session), ChittyEvidence
 -- (legal_case), ChittyDispute (dispute), ChittyCommand (project), and
 -- any future domain.
 --
