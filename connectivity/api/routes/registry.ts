@@ -6,6 +6,11 @@
  */
 
 import { Hono } from 'hono';
+import {
+  validateRegistration,
+  parseRepoUrl,
+  type RegistrationValidationRequest,
+} from '../lib/registration-validator';
 
 // Registry entry interface
 export interface SchemaRegistration {
@@ -47,30 +52,23 @@ export interface SchemaRegistration {
   };
 }
 
-export interface ComplianceCheck {
-  required: {
-    pass: number;
-    fail: number;
-    checks: Array<{ name: string; passed: boolean; message?: string }>;
-  };
-  recommended: {
-    pass: number;
-    fail: number;
-    checks: Array<{ name: string; passed: boolean; message?: string }>;
-  };
-  optional: {
-    pass: number;
-    fail: number;
-    checks: Array<{ name: string; passed: boolean; message?: string }>;
-  };
-  overall_status: 'compliant' | 'compliant_with_warnings' | 'non_compliant';
-  badge: string;
-  score: number; // 0-100
-}
+// ComplianceCheck shape is now defined and exported from
+// connectivity/api/lib/registration-validator.ts. The previous local
+// definition was tied to a placeholder route that returned hardcoded
+// scores; it was removed when the route was rewritten to call the
+// real validator. Re-export here so external imports of
+// `ComplianceCheck` from this module keep resolving.
+export type { ComplianceCheck } from '../lib/registration-validator';
 
 type Bindings = {
   REGISTRY_KV?: KVNamespace; // For storing registry entries
   ENVIRONMENT: string;
+  /**
+   * Optional GitHub token for the registration validator. Used to fetch
+   * compliance artifacts from private repos and to lift rate limits on
+   * raw.githubusercontent.com. Inject via `wrangler secret put GITHUB_TOKEN`.
+   */
+  GITHUB_TOKEN?: string;
 };
 
 export const registryRoute = new Hono<{ Bindings: Bindings }>();
@@ -256,78 +254,109 @@ registryRoute.post('/register', async (c) => {
   }, 201);
 });
 
-// Validate a service's schema compliance
+/**
+ * Validate a service's schema compliance.
+ *
+ * POST /api/registry/validate/:serviceName
+ * Body: { repoUrl: string, branch?: string }
+ *
+ * Fetches the candidate repo's compliance artifacts from GitHub raw URLs
+ * (database-config.json, CHARTER.md, CHITTY.md, CLAUDE.md, package.json),
+ * runs deterministic checks, returns a real score in [0,100].
+ *
+ * If `repoUrl` is omitted but the service is in the registry KV with
+ * a `metadata.repository` field, that repo is used.
+ */
 registryRoute.post('/validate/:serviceName', async (c) => {
   const serviceName = c.req.param('serviceName');
-  const body = await c.req.json<{ schema?: string }>().catch(() => ({}));
+  const body = await c
+    .req
+    .json<Partial<RegistrationValidationRequest>>()
+    .catch(() => ({} as Partial<RegistrationValidationRequest>));
 
-  // TODO: Implement actual schema validation
-  // For now, return example compliance check
+  // Resolve repo URL: explicit body wins, otherwise look up in KV
+  let repoUrl = body.repoUrl;
+  let branch = body.branch || 'main';
 
-  const complianceCheck: ComplianceCheck = {
-    required: {
-      pass: 3,
-      fail: 0,
-      checks: [
-        { name: 'temporal_versioning', passed: true, message: 'updated_at and deleted_at present' },
-        { name: 'audit_logging', passed: true, message: 'audit_logs table found' },
-        { name: 'security_hashing', passed: true, message: 'Token hashing implemented' }
-      ]
-    },
-    recommended: {
-      pass: 4,
-      fail: 1,
-      checks: [
-        { name: 'indexed_queries', passed: true, message: 'All foreign keys indexed' },
-        { name: 'gdpr_compliance', passed: true, message: 'Soft delete support' },
-        { name: 'performance_optimized', passed: true, message: 'Query patterns optimized' },
-        { name: 'documentation', passed: true, message: 'Schema documented' },
-        { name: 'chittyos_naming', passed: false, message: 'Uses "id" instead of "chitty_id" (acceptable for D1)' }
-      ]
-    },
-    optional: {
-      pass: 2,
-      fail: 2,
-      checks: [
-        { name: 'chittyledger_integration', passed: false, message: 'Not integrated (standalone app)' },
-        { name: 'postgresql_compatibility', passed: false, message: 'D1/SQLite only' },
-        { name: 'edge_optimized', passed: true, message: 'Optimized for Cloudflare edge' },
-        { name: 'kv_caching', passed: true, message: 'KV cache layer implemented' }
-      ]
-    },
-    overall_status: 'compliant_with_warnings',
-    badge: '🟢 ChittySchema Validated',
-    score: 85
-  };
-
-  // Update registry entry with validation results
   const kv = c.env.REGISTRY_KV;
+  let registration: SchemaRegistration | null = null;
   if (kv) {
     const existing = await kv.get(`registry:${serviceName}`);
     if (existing) {
-      const registration = JSON.parse(existing) as SchemaRegistration;
-      registration.validation = {
-        status: complianceCheck.overall_status === 'non_compliant' ? 'non_compliant' : 'validated',
-        last_validated: new Date().toISOString(),
-        badge_url: `https://img.shields.io/badge/ChittySchema-${complianceCheck.score}-${complianceCheck.score >= 80 ? 'green' : complianceCheck.score >= 60 ? 'yellow' : 'red'}`
-      };
-      registration.compliance = {
-        temporal_versioning: complianceCheck.required.checks.find(c => c.name === 'temporal_versioning')?.passed || false,
-        gdpr_compliant: complianceCheck.recommended.checks.find(c => c.name === 'gdpr_compliance')?.passed || false,
-        audit_logging: complianceCheck.required.checks.find(c => c.name === 'audit_logging')?.passed || false,
-        security_validated: complianceCheck.required.checks.find(c => c.name === 'security_hashing')?.passed || false
-      };
-      await kv.put(`registry:${serviceName}`, JSON.stringify(registration));
+      registration = JSON.parse(existing) as SchemaRegistration;
+      if (!repoUrl) repoUrl = registration.metadata?.repository;
     }
   }
 
+  if (!repoUrl) {
+    return c.json(
+      {
+        error: 'Missing repoUrl',
+        message:
+          'Provide repoUrl in body, or register the service first with metadata.repository so it can be looked up.',
+      },
+      400
+    );
+  }
+
+  // Validate repo URL shape early so we return a clean 400 instead of a 500
+  try {
+    parseRepoUrl(repoUrl);
+  } catch (err) {
+    return c.json({ error: 'Invalid repoUrl', message: (err as Error).message }, 400);
+  }
+
+  let complianceCheck;
+  try {
+    complianceCheck = await validateRegistration(
+      { serviceName, repoUrl, branch },
+      { githubToken: c.env.GITHUB_TOKEN }
+    );
+  } catch (err) {
+    console.error('Registration validation error:', err);
+    return c.json(
+      {
+        error: 'Validation failed',
+        message: (err as Error).message,
+        service: serviceName,
+        repoUrl,
+        branch,
+      },
+      502
+    );
+  }
+
+  // Persist validation outcome on the registry entry if present
+  if (kv && registration) {
+    registration.validation = {
+      status:
+        complianceCheck.overall_status === 'non_compliant'
+          ? 'non_compliant'
+          : 'validated',
+      last_validated: new Date().toISOString(),
+      badge_url: `https://schema.chitty.cc/api/registry/${serviceName}/badge`,
+    };
+    // Map compliance check facts back onto the legacy SchemaRegistration shape
+    registration.compliance = {
+      temporal_versioning: registration.compliance?.temporal_versioning ?? false,
+      gdpr_compliant: registration.compliance?.gdpr_compliant ?? false,
+      audit_logging: registration.compliance?.audit_logging ?? false,
+      security_validated: complianceCheck.overall_status !== 'non_compliant',
+    };
+    registration.metadata.updated_at = new Date().toISOString();
+    await kv.put(`registry:${serviceName}`, JSON.stringify(registration));
+  }
+
+  const badgeColor = complianceCheck.badge;
   return c.json({
     service: serviceName,
     validation: complianceCheck,
-    badge_markdown: `[![ChittySchema Validated](https://img.shields.io/badge/ChittySchema-Validated-green)](https://schema.chitty.cc/registry/${serviceName})`,
+    badge_markdown: `[![ChittySchema ${complianceCheck.overall_status}](https://schema.chitty.cc/api/registry/${serviceName}/badge)](https://schema.chitty.cc/api/registry/${serviceName}/compliance)`,
+    badge_color: badgeColor,
     recommendations: complianceCheck.recommended.checks
-      .filter(c => !c.passed)
-      .map(c => c.message)
+      .filter((check) => !check.passed)
+      .map((check) => check.message)
+      .filter((m): m is string => typeof m === 'string'),
   });
 });
 
