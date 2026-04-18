@@ -143,46 +143,156 @@ export async function handleRegistrationWebhook(requestBody: ServiceRegistration
 }
 
 /**
- * Example usage in chittyregister service
+ * Worker / serverless-friendly variant of validateForRegistration.
+ *
+ * Calls the deployed ChittySchema validate endpoint over HTTP. Use this
+ * from environments that cannot spawn `git clone` (Cloudflare Workers,
+ * edge functions, browser-side tooling). Server-side Node callers that
+ * want the full local-clone audit should use validateForRegistration().
+ *
+ * The endpoint is real and lives at:
+ *   POST {schemaBaseUrl}/api/registry/validate/:serviceName
+ *   Body: { repoUrl, branch? }
+ *
+ * Default schemaBaseUrl is https://schema.chitty.cc. Override for staging
+ * or local dev (e.g. http://localhost:8787).
  */
-export const example = `
-// In chittyregister/src/routes/services.ts
+export async function validateForRegistrationViaHttp(
+  request: ServiceRegistrationRequest,
+  options: { schemaBaseUrl?: string; authToken?: string } = {}
+): Promise<CertificationResult> {
+  const baseUrl = (options.schemaBaseUrl || 'https://schema.chitty.cc').replace(/\/+$/, '');
+  const url = `${baseUrl}/api/registry/validate/${encodeURIComponent(request.serviceName)}`;
 
-import { validateForRegistration } from '@chittyos/schema/integrations/chittyregister-hook';
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (options.authToken) headers.Authorization = `Bearer ${options.authToken}`;
 
-router.post('/api/services/register', async (req, res) => {
-  const { serviceName, repoUrl, version } = req.body;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        repoUrl: request.repoUrl,
+        branch: request.branch,
+      }),
+    });
+  } catch (err) {
+    return {
+      certified: false,
+      score: 0,
+      violations: [`Network error calling ${url}: ${(err as Error).message}`],
+      warnings: [],
+      report: '',
+    };
+  }
 
-  // Validate schema compliance
-  const certification = await validateForRegistration({
-    serviceName,
-    repoUrl,
-    version,
+  if (!res.ok) {
+    let body = '';
+    try {
+      body = await res.text();
+    } catch {
+      // ignore
+    }
+    return {
+      certified: false,
+      score: 0,
+      violations: [`Validator responded ${res.status} ${res.statusText}: ${body || '<empty>'}`],
+      warnings: [],
+      report: body,
+    };
+  }
+
+  // Response shape from registry.ts: { service, validation: ComplianceCheck, recommendations: string[] }
+  const json = (await res.json()) as {
+    validation: {
+      score: number;
+      overall_status: 'compliant' | 'compliant_with_warnings' | 'non_compliant';
+      required: { checks: Array<{ name: string; passed: boolean; message?: string }> };
+      recommended: { checks: Array<{ name: string; passed: boolean; message?: string }> };
+      evidence: { repo: string; branch: string; fetched_at: string };
+    };
+    recommendations: string[];
+  };
+
+  const v = json.validation;
+  const certified = v.overall_status !== 'non_compliant' && v.score >= 80;
+  const violations = v.required.checks
+    .filter((check) => !check.passed)
+    .map((check) => check.message || check.name);
+  const warnings = v.recommended.checks
+    .filter((check) => !check.passed)
+    .map((check) => check.message || check.name);
+
+  return {
+    certified,
+    score: v.score,
+    violations,
+    warnings,
+    report: JSON.stringify(json, null, 2),
+    certifiedAt: certified ? new Date(v.evidence.fetched_at) : undefined,
+  };
+}
+
+/**
+ * Example call sites. These reflect the actual integration paths, not
+ * aspirational ones. The HTTP variant works in any runtime; the local
+ * variant requires Node + git + npx.
+ */
+export const examples = {
+  /**
+   * In chittyregister (Cloudflare Worker / edge runtime):
+   * call the deployed ChittySchema validator over HTTP. No npm
+   * dependency on @chittyos/schema is required — just fetch.
+   *
+   * Reference call site (when wired in chittyregister):
+   *   CHITTYFOUNDATION/chittyregister/src/routes/services.ts
+   */
+  http: `
+import { validateForRegistrationViaHttp } from '@chittyos/schema/integrations/chittyregister-hook';
+
+app.post('/api/v1/services/register', async (c) => {
+  const body = await c.req.json();
+
+  const certification = await validateForRegistrationViaHttp({
+    serviceName: body.service_name,
+    repoUrl: body.repo_url,
+    branch: body.branch,
+    version: body.version,
   });
 
   if (!certification.certified) {
-    return res.status(400).json({
+    return c.json({
       error: 'Schema certification failed',
       score: certification.score,
       violations: certification.violations,
-      report: certification.report,
-    });
+      warnings: certification.warnings,
+    }, 400);
   }
 
-  // Proceed with registration
-  await db.insert('services', {
-    name: serviceName,
-    repo_url: repoUrl,
-    version,
-    schema_certified: true,
-    schema_score: certification.score,
-    certified_at: certification.certifiedAt,
-  });
-
-  res.json({
-    success: true,
-    message: 'Service registered successfully',
-    certification,
-  });
+  // proceed with registration write to service_registrations
+  // ...
+  return c.json({ success: true, certification });
 });
-`;
+`,
+  /**
+   * In a Node CI job (e.g. GitHub Actions release workflow): use the
+   * full local validator, which clones and runs the compliance script.
+   * Requires Node, git, and npx in the runner image.
+   */
+  local: `
+import { validateForRegistration } from '@chittyos/schema/integrations/chittyregister-hook';
+
+const result = await validateForRegistration({
+  serviceName: process.env.SERVICE_NAME!,
+  repoUrl: process.env.GITHUB_REPOSITORY_URL!,
+  branch: process.env.GITHUB_REF_NAME,
+  version: process.env.PACKAGE_VERSION!,
+});
+
+if (!result.certified) {
+  console.error('Schema certification failed:', result.violations);
+  process.exit(1);
+}
+`,
+};
