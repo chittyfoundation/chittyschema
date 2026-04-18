@@ -24,6 +24,7 @@
         "oauth_clients": "chittyauth",
         "oauth_authorization_codes": "chittyauth",
         "registrations": "chittyauth",
+        "service_capabilities": "chittyregister",
         "verifications": "chittyverify",
         "trust_networks": "chittyscore",
         "trust_scores": "chittyscore",
@@ -77,6 +78,15 @@
       "tables": {
         "ontology_terms": "chittycanon",
         "term_observations": "chittycanon",
+        "standards_sources": "chittycanon",
+        "standards_terms": "chittycanon",
+        "alignment_map": "chittycanon",
+        "divergence_registry": "chittycanon",
+        "reserved_words": "chittycanon",
+        "known_abbreviations": "chittycanon",
+        "canon_audit_log": "chittycanon",
+        "leadership_initiatives": "chittycanon",
+        "schema_registry": "chittycanon",
         "canon.policies": "chittycanon",
         "canon.skills": "chittycanon",
         "canon.agents": "chittycanon",
@@ -280,6 +290,37 @@
       ],
       "tables": {
         "disputes": "chittydispute"
+      }
+    },
+    {
+      "name": "chittydna",
+      "description": "Evidentiary + coherence double-helix: publishable entries, sections, fragments, attributions, and propagation tracking",
+      "envVar": "CHITTYDNA_DB_URL",
+      "owner": "ChittyFoundation",
+      "services": [
+        "chittydna"
+      ],
+      "tables": {
+        "dna_seeds": "chittydna",
+        "dna_entries": "chittydna",
+        "dna_sections": "chittydna",
+        "dna_fragments": "chittydna",
+        "dna_attributions": "chittydna",
+        "dna_propagations": "chittydna",
+        "dna_audit_log": "chittydna"
+      }
+    },
+    {
+      "name": "chittygov",
+      "description": "Entity governance, compliance calendar, authority resolutions, and regulatory filings for ChittyFoundation portfolio companies",
+      "envVar": "CHITTYGOV_DB_URL",
+      "owner": "ChittyFoundation",
+      "services": [
+        "chittygov"
+      ],
+      "tables": {
+        "compliance_filings": "chittygov",
+        "compliance_monitors": "chittygov"
       }
     },
     {
@@ -1169,6 +1210,218 @@
       "legalHold": true,
       "stewards": "@chittyapps/finance",
       "notes": "Immutable audit trail. Enforces maker/checker segregation (L2 classify, L3 reconcile)."
+    },
+    {
+      "table": "service_capabilities",
+      "database": "chittyos-core",
+      "service": "chittyregister",
+      "repo": "CHITTYFOUNDATION/chittyregister",
+      "authoringFile": "migrations/002-service-capabilities.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/register",
+      "notes": "MCP tool catalog. FK service_capabilities.registration_chitty_id -> service_registrations.chitty_id. ChittySchema validates input_schema JSON Schema before storage."
+    },
+    {
+      "table": "dna_seeds",
+      "database": "chittydna",
+      "service": "chittydna",
+      "repo": "CHITTYFOUNDATION/chittydna",
+      "authoringFile": "migrations/0001_initial.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/dna"
+    },
+    {
+      "table": "dna_entries",
+      "database": "chittydna",
+      "service": "chittydna",
+      "repo": "CHITTYFOUNDATION/chittydna",
+      "authoringFile": "migrations/0001_initial.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/dna"
+    },
+    {
+      "table": "dna_sections",
+      "database": "chittydna",
+      "service": "chittydna",
+      "repo": "CHITTYFOUNDATION/chittydna",
+      "authoringFile": "migrations/0001_initial.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/dna"
+    },
+    {
+      "table": "dna_fragments",
+      "database": "chittydna",
+      "service": "chittydna",
+      "repo": "CHITTYFOUNDATION/chittydna",
+      "authoringFile": "migrations/0001_initial.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/dna"
+    },
+    {
+      "table": "dna_attributions",
+      "database": "chittydna",
+      "service": "chittydna",
+      "repo": "CHITTYFOUNDATION/chittydna",
+      "authoringFile": "migrations/0001_initial.sql",
+      "canonType": "A",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/dna",
+      "notes": "Authorship attribution claims. Treated as authority (A) per canon P/L/T/E/A taxonomy."
+    },
+    {
+      "table": "dna_propagations",
+      "database": "chittydna",
+      "service": "chittydna",
+      "repo": "CHITTYFOUNDATION/chittydna",
+      "authoringFile": "migrations/0001_initial.sql",
+      "canonType": "E",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/dna"
+    },
+    {
+      "table": "dna_audit_log",
+      "database": "chittydna",
+      "service": "chittydna",
+      "repo": "CHITTYFOUNDATION/chittydna",
+      "authoringFile": "migrations/0001_initial.sql",
+      "canonType": "E",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/dna"
+    },
+    {
+      "table": "compliance_filings",
+      "database": "chittygov",
+      "service": "chittygov",
+      "repo": "CHITTYFOUNDATION/chittygov",
+      "authoringFile": "data/migrations/0001_compliance_calendar.sql",
+      "canonType": "E",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/gov"
+    },
+    {
+      "table": "compliance_monitors",
+      "database": "chittygov",
+      "service": "chittygov",
+      "repo": "CHITTYFOUNDATION/chittygov",
+      "authoringFile": "data/migrations/0001_compliance_calendar.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/gov"
+    },
+    {
+      "table": "standards_sources",
+      "database": "chittycanon",
+      "service": "chittycanon",
+      "repo": "CHITTYFOUNDATION/chittycanon",
+      "authoringFile": "migrations/0001_initial_schema.sql",
+      "canonType": "A",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/canon"
+    },
+    {
+      "table": "standards_terms",
+      "database": "chittycanon",
+      "service": "chittycanon",
+      "repo": "CHITTYFOUNDATION/chittycanon",
+      "authoringFile": "migrations/0001_initial_schema.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/canon"
+    },
+    {
+      "table": "alignment_map",
+      "database": "chittycanon",
+      "service": "chittycanon",
+      "repo": "CHITTYFOUNDATION/chittycanon",
+      "authoringFile": "migrations/0001_initial_schema.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/canon"
+    },
+    {
+      "table": "divergence_registry",
+      "database": "chittycanon",
+      "service": "chittycanon",
+      "repo": "CHITTYFOUNDATION/chittycanon",
+      "authoringFile": "migrations/0001_initial_schema.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/canon"
+    },
+    {
+      "table": "reserved_words",
+      "database": "chittycanon",
+      "service": "chittycanon",
+      "repo": "CHITTYFOUNDATION/chittycanon",
+      "authoringFile": "migrations/0001_initial_schema.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/canon"
+    },
+    {
+      "table": "known_abbreviations",
+      "database": "chittycanon",
+      "service": "chittycanon",
+      "repo": "CHITTYFOUNDATION/chittycanon",
+      "authoringFile": "migrations/0001_initial_schema.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/canon"
+    },
+    {
+      "table": "canon_audit_log",
+      "database": "chittycanon",
+      "service": "chittycanon",
+      "repo": "CHITTYFOUNDATION/chittycanon",
+      "authoringFile": "migrations/0001_initial_schema.sql",
+      "canonType": "E",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/canon"
+    },
+    {
+      "table": "leadership_initiatives",
+      "database": "chittycanon",
+      "service": "chittycanon",
+      "repo": "CHITTYFOUNDATION/chittycanon",
+      "authoringFile": "migrations/0001_initial_schema.sql",
+      "canonType": "E",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/canon"
+    },
+    {
+      "table": "schema_registry",
+      "database": "chittycanon",
+      "service": "chittycanon",
+      "repo": "CHITTYFOUNDATION/chittycanon",
+      "authoringFile": "migrations/0001_initial_schema.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/canon",
+      "notes": "Canon's own registry of schema artifacts. Meta-level: catalogs schemas that the chittyschema worker serves."
     }
   ]
 }
