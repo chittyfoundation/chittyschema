@@ -281,6 +281,36 @@
       "tables": {
         "disputes": "chittydispute"
       }
+    },
+    {
+      "name": "chittyfinance",
+      "description": "Multi-tenant financial management: LLC hierarchy, property management, COA classification, allocation engine",
+      "envVar": "CHITTYFINANCE_DB_URL",
+      "owner": "ChittyFinance Team",
+      "services": [
+        "chittyfinance"
+      ],
+      "tables": {
+        "tenants": "chittyfinance",
+        "users": "chittyfinance",
+        "tenant_users": "chittyfinance",
+        "chart_of_accounts": "chittyfinance",
+        "accounts": "chittyfinance",
+        "transactions": "chittyfinance",
+        "intercompany_transactions": "chittyfinance",
+        "allocation_rules": "chittyfinance",
+        "allocation_runs": "chittyfinance",
+        "properties": "chittyfinance",
+        "units": "chittyfinance",
+        "leases": "chittyfinance",
+        "property_valuations": "chittyfinance",
+        "integrations": "chittyfinance",
+        "tasks": "chittyfinance",
+        "ai_messages": "chittyfinance",
+        "comms_log": "chittyfinance",
+        "workflows": "chittyfinance",
+        "classification_audit": "chittyfinance"
+      }
     }
   ],
   "tableOwners": [
@@ -922,6 +952,223 @@
       "semver": "0.1.0",
       "legalHold": true,
       "stewards": "@chittyos/dispute"
+    },
+    {
+      "table": "tenants",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "L",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance",
+      "notes": "Legal entities (LLCs, properties). Self-referential hierarchy via parent_id."
+    },
+    {
+      "table": "users",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "P",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance",
+      "notes": "Namespace collision with chittyledger.users — different table, different DB."
+    },
+    {
+      "table": "tenant_users",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "E",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance"
+    },
+    {
+      "table": "chart_of_accounts",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "A",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance",
+      "notes": "L4 governed. NULL tenant_id = global defaults (60 REI accounts seeded)."
+    },
+    {
+      "table": "accounts",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "T",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance"
+    },
+    {
+      "table": "transactions",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "E",
+      "semver": "1.0.0",
+      "legalHold": true,
+      "stewards": "@chittyapps/finance",
+      "notes": "Trust-path classification (L0-L4). Reconciled transactions are immutable."
+    },
+    {
+      "table": "intercompany_transactions",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "E",
+      "semver": "1.0.0",
+      "legalHold": true,
+      "stewards": "@chittyapps/finance"
+    },
+    {
+      "table": "allocation_rules",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "A",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance"
+    },
+    {
+      "table": "allocation_runs",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "E",
+      "semver": "1.0.0",
+      "legalHold": true,
+      "stewards": "@chittyapps/finance"
+    },
+    {
+      "table": "properties",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "L",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance"
+    },
+    {
+      "table": "units",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "L",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance"
+    },
+    {
+      "table": "leases",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "E",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance",
+      "notes": "GDPR-sensitive: rental tenant PII (name, email, phone)."
+    },
+    {
+      "table": "property_valuations",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "T",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance"
+    },
+    {
+      "table": "integrations",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "T",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance",
+      "notes": "Credentials JSONB encrypted at rest by Neon."
+    },
+    {
+      "table": "tasks",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "E",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance"
+    },
+    {
+      "table": "ai_messages",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "E",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance"
+    },
+    {
+      "table": "comms_log",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "E",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance",
+      "notes": "GDPR-sensitive: recipient PII."
+    },
+    {
+      "table": "workflows",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "E",
+      "semver": "1.0.0",
+      "legalHold": false,
+      "stewards": "@chittyapps/finance"
+    },
+    {
+      "table": "classification_audit",
+      "database": "chittyfinance",
+      "service": "chittyfinance",
+      "repo": "CHITTYAPPS/chittyfinance",
+      "authoringFile": "migrations/chittyfinance/001_initial_schema.sql",
+      "canonType": "E",
+      "semver": "1.0.0",
+      "legalHold": true,
+      "stewards": "@chittyapps/finance",
+      "notes": "Immutable audit trail. Enforces maker/checker segregation (L2 classify, L3 reconcile)."
     }
   ]
 }

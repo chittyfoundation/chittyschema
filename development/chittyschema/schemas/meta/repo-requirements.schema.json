@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Repo Capability Requirements",
+  "description": "Repo-scoped TY/VY/RY requirements used to gate CODEOWNERS eligibility.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "generated_at", "repos"],
+  "properties": {
+    "version": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date" },
+    "notes": { "type": "string" },
+    "repos": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/repoRequirement" }
+    }
+  },
+  "$defs": {
+    "term": { "type": "string", "minLength": 1 },
+    "sourcePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ty": { "type": "string", "enum": ["given_or_earned", "earned_only", "given_only"] },
+        "vy": { "type": "string", "enum": ["given_or_earned", "earned_only", "given_only"] },
+        "ry": { "type": "string", "enum": ["given_or_earned", "earned_only", "given_only"] }
+      }
+    },
+    "requires": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ty", "vy", "ry"],
+      "properties": {
+        "ty": { "type": "array", "items": { "$ref": "#/$defs/term" } },
+        "vy": { "type": "array", "items": { "$ref": "#/$defs/term" } },
+        "ry": { "type": "array", "items": { "$ref": "#/$defs/term" } }
+      }
+    },
+    "repoRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo", "tier", "requires"],
+      "properties": {
+        "repo": { "type": "string", "minLength": 1 },
+        "tier": { "type": "integer", "minimum": 0 },
+        "source_policy": { "$ref": "#/$defs/sourcePolicy" },
+        "requires": { "$ref": "#/$defs/requires" }
+      }
+    }
+  }
+}
+
