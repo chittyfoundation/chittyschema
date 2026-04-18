@@ -1,0 +1,30 @@
+{
+  "version": "0.1.0",
+  "generated_at": "2026-04-18",
+  "notes": "Schema-exercising fixture for CI. Not the source of truth — see CHITTYFOUNDATION/chittycanon/governance/repo_requirements.json.",
+  "repos": [
+    {
+      "repo": "CHITTYFOUNDATION/chittycanon",
+      "tier": 0,
+      "source_policy": {
+        "ty": "given_or_earned",
+        "vy": "given_only",
+        "ry": "given_or_earned"
+      },
+      "requires": {
+        "ty": ["canon", "ontology", "governance"],
+        "vy": ["cloudflare-workers", "github-actions"],
+        "ry": ["trust-anchor", "portfolio-policy"]
+      }
+    },
+    {
+      "repo": "CHITTYOS/*",
+      "tier": 2,
+      "requires": {
+        "ty": ["chittyos-runtime"],
+        "vy": ["cloudflare-workers"],
+        "ry": ["service-ops"]
+      }
+    }
+  ]
+}
