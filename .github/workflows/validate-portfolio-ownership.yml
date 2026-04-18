@@ -1,8 +1,14 @@
 name: validate-portfolio-ownership
 
-# Gate PRs that touch portfolio-ownership / repo-requirements meta-schemas
-# (or the validator itself) on `npm run validate:portfolio-ownership`,
-# pulling owners.json + repo_requirements.json from the chittycanon repo.
+# Gate PRs that touch the portfolio-owners / repo-requirements meta-schemas
+# (or the validator itself) on `npm run validate:portfolio-ownership`.
+#
+# Validation runs against committed fixtures under
+# identity/schemas/meta/fixtures/ — these are realistic, schema-exercising
+# examples maintained inside this repo. The authoritative governance files
+# live in CHITTYFOUNDATION/chittycanon/governance/{owners,repo_requirements}.json
+# and are validated by chittycanon's own CI against this schema (via
+# the meta-validate API at schema.chitty.cc/meta/:name/validate).
 
 on:
   push:
@@ -10,12 +16,14 @@ on:
     paths:
       - 'identity/schemas/meta/portfolio-owners.schema.json'
       - 'identity/schemas/meta/repo-requirements.schema.json'
+      - 'identity/schemas/meta/fixtures/**'
       - 'identity/scripts/validate-portfolio-ownership.ts'
       - 'connectivity/api/lib/meta-validator.ts'
   pull_request:
     paths:
       - 'identity/schemas/meta/portfolio-owners.schema.json'
       - 'identity/schemas/meta/repo-requirements.schema.json'
+      - 'identity/schemas/meta/fixtures/**'
       - 'identity/scripts/validate-portfolio-ownership.ts'
       - 'connectivity/api/lib/meta-validator.ts'
 
@@ -23,30 +31,17 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout chittyschema
-        uses: actions/checkout@v4
-        with:
-          path: chittyschema
-
-      - name: Checkout chittycanon (governance source of truth)
-        uses: actions/checkout@v4
-        with:
-          repository: CHITTYFOUNDATION/chittycanon
-          path: chittycanon
-          ref: main
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: chittyschema/package-lock.json
 
       - name: Install dependencies
-        working-directory: chittyschema
         run: npm ci || npm install
 
       - name: Validate portfolio ownership against meta-schemas
-        working-directory: chittyschema
         env:
-          CANON_DIR: ${{ github.workspace }}/chittycanon/governance
+          CANON_DIR: identity/schemas/meta/fixtures
         run: npm run validate:portfolio-ownership
