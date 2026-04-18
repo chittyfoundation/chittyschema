@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.chitty.cc/meta/fractal-layout.schema.json",
+  "title": "Fractal Trinity Layout",
+  "description": "Meta-schema describing the required directory layout for ChittyOS repos. Validators (validate-fractal-layout.ts) walk a target repo and check it conforms to this contract. The trinity (identity / authority / connectivity) mirrors ChittyOS tier-0 services and the data-layer scope primitive.",
+  "type": "object",
+  "required": ["root", "identity", "authority", "connectivity"],
+  "additionalProperties": false,
+  "properties": {
+    "root": {
+      "type": "object",
+      "description": "Files required at the repo root",
+      "required": ["required_files", "required_dirs"],
+      "properties": {
+        "required_files": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [
+            "scope.json",
+            "CHARTER.md",
+            "CHITTY.md",
+            "CLAUDE.md",
+            "README.md",
+            "package.json",
+            "tsconfig.json"
+          ]
+        },
+        "required_dirs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["identity", "authority", "connectivity", "scopes"]
+        },
+        "optional_files": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [
+            "wrangler.jsonc",
+            "database-config.json",
+            ".eslintrc.cjs",
+            ".gitignore",
+            ".npmrc",
+            ".npmignore"
+          ]
+        }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "description": "ChittyID layer — what this service IS",
+      "properties": {
+        "required_subdirs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["src"]
+        },
+        "optional_subdirs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["agents", "scripts", "schemas", "docs"]
+        },
+        "forbidden": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Subdirs that should NOT live here (would belong elsewhere in trinity)",
+          "default": ["api", "migrations", "integrations"]
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "description": "ChittyTrust + ChittyCert + ChittyCanon layer — weight",
+      "properties": {
+        "optional_subdirs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["canon", "certifications", "owners"]
+        },
+        "optional_files": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["DEV_GUIDE.md", "SCHEMA_GOVERNANCE.md"]
+        }
+      }
+    },
+    "connectivity": {
+      "type": "object",
+      "description": "ChittyConnect + ChittyRouter layer — interaction",
+      "properties": {
+        "optional_subdirs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [
+            "api",
+            "integrations",
+            "migrations",
+            "releases",
+            "deployments",
+            "consumers",
+            "upstreams"
+          ]
+        },
+        "forbidden": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Subdirs that should NOT live here (would belong elsewhere in trinity)",
+          "default": ["src", "types", "validators", "agents"]
+        }
+      }
+    },
+    "scopes": {
+      "type": "object",
+      "description": "Recursive containment — each subdirectory under scopes/ is itself a fractal repo (validates against this same meta-schema)",
+      "properties": {
+        "child_scope_validation": {
+          "type": "string",
+          "enum": ["required", "optional"],
+          "default": "required",
+          "description": "Whether each scopes/<child>/ must validate against this same meta-schema"
+        },
+        "child_scope_must_have": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["scope.json"],
+          "description": "Minimum required for each child scope (parent_scope_id allows inheriting the rest)"
+        }
+      }
+    }
+  }
+}
