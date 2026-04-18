@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.chitty.cc/meta/repo-scope.schema.json",
+  "title": "Repo Scope Manifest",
+  "description": "Meta-schema for `scope.json` at the root of every ChittyOS repository. The repo IS itself a registered scope — this manifest mirrors the chittyos-core `scopes` table (migration 002) at the repo level and supports prototypal inheritance via parent_scope_id for nested sub-services in `scopes/`.",
+  "type": "object",
+  "required": [
+    "scope_type",
+    "characterization",
+    "status",
+    "canon_uri",
+    "owner_org",
+    "name",
+    "trinity"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "format": "uri",
+      "description": "JSON Schema URI — should resolve to this meta-schema"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID of this scope (matches scopes.id in chittyos-core). Optional at repo level — chittyregister will mint one on registration."
+    },
+    "chitty_id": {
+      "type": "string",
+      "pattern": "^[0-9]{2}-[A-Z0-9]+-[A-Z]{3}-[0-9A-Z]{4}-[PLTEA]-[0-9]{4}-[0-9A-Z]+-[0-9]+$",
+      "description": "ChittyID format VV-G-LLL-SSSS-T-YM-C-X where T ∈ {P,L,T,E,A}. Required for registered scopes."
+    },
+    "scope_type": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Free-text taxonomy — zero-DDL extensibility. Common values: service, library, plugin, agent, tool, template, monorepo, application."
+    },
+    "characterization": {
+      "type": "string",
+      "enum": ["Service", "Library", "Plugin", "Agent", "Tool", "Template", "Monorepo", "Application", "Case", "Session", "Transaction", "Incident", "Project", "Engagement"],
+      "description": "Mirrors scope_characterization enum in chittyos-core scopes table"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["new", "active", "waiting", "escalated", "paused", "resolved", "closed", "archived"],
+      "description": "Lifecycle status — mirrors scope_status enum"
+    },
+    "parent_scope_id": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "format": "uuid" }
+      ],
+      "description": "UUID of the parent scope. Null for root repos. Sub-services in `scopes/<child>/scope.json` reference their parent's id."
+    },
+    "canon_uri": {
+      "type": "string",
+      "pattern": "^chittycanon://",
+      "description": "Canonical URI: chittycanon://core/services/<name> or similar"
+    },
+    "owner_org": {
+      "type": "string",
+      "enum": ["CHITTYFOUNDATION", "CHITTYOS", "chittyapps"],
+      "description": "GitHub organization that owns this repo"
+    },
+    "tier": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5,
+      "description": "ChittyOS tier (0=trust anchors, 1=core identity, ..., 5=application)"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Service/repo name (e.g., 'chittyschema')"
+    },
+    "description": {
+      "type": "string",
+      "description": "Short human-readable description"
+    },
+    "trinity": {
+      "type": "object",
+      "description": "Index of where each trinity layer lives. Allows tooling to locate paths without globbing.",
+      "required": ["identity", "authority", "connectivity"],
+      "properties": {
+        "identity": {
+          "type": "object",
+          "description": "ChittyID layer — what this service IS",
+          "additionalProperties": { "type": "string" }
+        },
+        "authority": {
+          "type": "object",
+          "description": "ChittyTrust + ChittyCert + ChittyCanon layer — weight",
+          "additionalProperties": { "type": "string" }
+        },
+        "connectivity": {
+          "type": "object",
+          "description": "ChittyConnect + ChittyRouter layer — interaction",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "inherits": {
+      "type": "object",
+      "description": "Prototypal inheritance from parent_scope. Each trinity layer can independently inherit (true) or override (false). Authority defaults to true (children inherit parent's CHARTER/canon by default).",
+      "properties": {
+        "identity": { "type": "boolean" },
+        "authority": { "type": "boolean" },
+        "connectivity": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "overrides": {
+      "type": "object",
+      "description": "Explicit overrides applied on top of inherited content from parent_scope.",
+      "properties": {
+        "agents": {
+          "type": "object",
+          "properties": {
+            "disabled": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Names of parent agents to disable for this child"
+            }
+          }
+        },
+        "owners": {
+          "type": "object",
+          "properties": {
+            "additional": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Additional CODEOWNERS for child-specific paths"
+            }
+          }
+        }
+      }
+    },
+    "registered_with": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "ChittyOS services this scope is registered with (chittyregister, chittyschema, chittycertify, etc.)"
+    }
+  }
+}

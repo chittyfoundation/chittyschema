@@ -26,6 +26,7 @@
     "validate:manifest": "tsx identity/scripts/validate-manifest.ts",
     "validate:service": "tsx identity/scripts/validate-service-compliance.ts",
     "validate:portfolio-ownership": "tsx identity/scripts/validate-portfolio-ownership.ts",
+    "validate:fractal": "tsx identity/scripts/validate-fractal-layout.ts",
     "certify": "tsx identity/scripts/validate-service-compliance.ts",
     "migration:create": "tsx identity/scripts/create-migration.ts",
     "migration:apply": "tsx identity/scripts/apply-migration.ts",
