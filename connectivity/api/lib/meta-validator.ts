@@ -38,6 +38,10 @@ import canonicalUriSchema from '../../../identity/schemas/meta/canonical-uri.sch
 import portfolioOwnersSchema from '../../../identity/schemas/meta/portfolio-owners.schema.json';
 // @ts-expect-error JSON imports
 import repoRequirementsSchema from '../../../identity/schemas/meta/repo-requirements.schema.json';
+// @ts-expect-error JSON imports
+import repoScopeSchema from '../../../identity/schemas/meta/repo-scope.schema.json';
+// @ts-expect-error JSON imports
+import fractalLayoutSchema from '../../../identity/schemas/meta/fractal-layout.schema.json';
 
 export type MetaSchemaName =
   | 'manifest'
@@ -48,7 +52,9 @@ export type MetaSchemaName =
   | 'ontology-response'
   | 'canonical-uri'
   | 'portfolio-owners'
-  | 'repo-requirements';
+  | 'repo-requirements'
+  | 'repo-scope'
+  | 'fractal-layout';
 
 export const META_SCHEMAS: Record<MetaSchemaName, unknown> = {
   manifest: manifestSchema,
@@ -60,6 +66,8 @@ export const META_SCHEMAS: Record<MetaSchemaName, unknown> = {
   'canonical-uri': canonicalUriSchema,
   'portfolio-owners': portfolioOwnersSchema,
   'repo-requirements': repoRequirementsSchema,
+  'repo-scope': repoScopeSchema,
+  'fractal-layout': fractalLayoutSchema,
 };
 
 const ajv = new Ajv2020({
@@ -83,6 +91,8 @@ const validators: Record<MetaSchemaName, ValidateFunction> = {
   'canonical-uri': ajv.compile(canonicalUriSchema as object),
   'portfolio-owners': ajv.compile(portfolioOwnersSchema as object),
   'repo-requirements': ajv.compile(repoRequirementsSchema as object),
+  'repo-scope': ajv.compile(repoScopeSchema as object),
+  'fractal-layout': ajv.compile(fractalLayoutSchema as object),
 };
 
 
