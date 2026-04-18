@@ -15,7 +15,8 @@
         "chittyconnect",
         "chittyrouter",
         "chittychronicle",
-        "chittyreception"
+        "chittyreception",
+        "chittyschema"
       ],
       "tables": {
         "identities": "chittyid",
@@ -33,6 +34,10 @@
         "reception_calls": "chittyreception",
         "reception_messages": "chittyreception",
         "reception_sessions": "chittyreception",
+        "scopes": "chittyschema",
+        "scope_parties": "chittyschema",
+        "scope_events": "chittyschema",
+        "scope_artifacts": "chittyschema",
         "audit_logs": "shared"
       }
     },
@@ -1422,6 +1427,54 @@
       "legalHold": false,
       "stewards": "@chittyfoundation/canon",
       "notes": "Canon's own registry of schema artifacts. Meta-level: catalogs schemas that the chittyschema worker serves."
+    },
+    {
+      "table": "scopes",
+      "database": "chittyos-core",
+      "service": "chittyschema",
+      "repo": "CHITTYFOUNDATION/chittyschema",
+      "authoringFile": "connectivity/migrations/chittyos-core/002_fractal_scopes.sql",
+      "canonType": "E",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/schema",
+      "notes": "Fractal scope primitive. Self-similar via parent_scope_id. Domain taxonomy in scope_type (free text). Consumers: chittystream-canon (live_stream_session), ChittyEvidence (legal_case), ChittyDispute (dispute), ChittyCommand (project)."
+    },
+    {
+      "table": "scope_parties",
+      "database": "chittyos-core",
+      "service": "chittyschema",
+      "repo": "CHITTYFOUNDATION/chittyschema",
+      "authoringFile": "connectivity/migrations/chittyos-core/002_fractal_scopes.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/schema",
+      "notes": "Party membership join table. entity_type column enforces full P/L/T/E/A vocabulary."
+    },
+    {
+      "table": "scope_events",
+      "database": "chittyos-core",
+      "service": "chittyschema",
+      "repo": "CHITTYFOUNDATION/chittyschema",
+      "authoringFile": "connectivity/migrations/chittyos-core/002_fractal_scopes.sql",
+      "canonType": "E",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/schema",
+      "notes": "Append-only audit log for scope lifecycle. Auto-populated by trg_scopes_transitions on status/handoff changes."
+    },
+    {
+      "table": "scope_artifacts",
+      "database": "chittyos-core",
+      "service": "chittyschema",
+      "repo": "CHITTYFOUNDATION/chittyschema",
+      "authoringFile": "connectivity/migrations/chittyos-core/002_fractal_scopes.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/schema",
+      "notes": "Storage-agnostic artifacts via storage_type + storage_ref. Integrity via content_hash."
     }
   ]
 }
