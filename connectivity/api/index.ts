@@ -122,6 +122,7 @@ app.get('/', (c) => {
       tableDrift: 'GET /api/owners/:database/:table/drift',
       listMetaSchemas: 'GET /meta',
       getMetaSchema: 'GET /meta/:name',
+      validateAgainstMetaSchema: 'POST /meta/:name/validate',
       generatePython: 'GET /api/generate/python/:table',
       generateTypeScript: 'GET /api/generate/typescript/:table',
       generateZod: 'GET /api/generate/zod/:table',
