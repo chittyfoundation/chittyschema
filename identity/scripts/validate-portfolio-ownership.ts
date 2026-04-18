@@ -3,7 +3,9 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { validate } from '../../connectivity/api/lib/meta-validator';
 
-const CANON_DIR = resolve(process.env.HOME || '/home/ubuntu', 'projects/github.com/CHITTYFOUNDATION/chittycanon/governance');
+const CANON_DIR = process.env.CANON_DIR
+  ? resolve(process.env.CANON_DIR)
+  : resolve(process.env.HOME || '/home/ubuntu', 'projects/github.com/CHITTYFOUNDATION/chittycanon/governance');
 
 function readJson(name: string): unknown {
   const p = resolve(CANON_DIR, name);

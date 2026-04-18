@@ -1,0 +1,52 @@
+name: validate-portfolio-ownership
+
+# Gate PRs that touch portfolio-ownership / repo-requirements meta-schemas
+# (or the validator itself) on `npm run validate:portfolio-ownership`,
+# pulling owners.json + repo_requirements.json from the chittycanon repo.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'identity/schemas/meta/portfolio-owners.schema.json'
+      - 'identity/schemas/meta/repo-requirements.schema.json'
+      - 'identity/scripts/validate-portfolio-ownership.ts'
+      - 'connectivity/api/lib/meta-validator.ts'
+  pull_request:
+    paths:
+      - 'identity/schemas/meta/portfolio-owners.schema.json'
+      - 'identity/schemas/meta/repo-requirements.schema.json'
+      - 'identity/scripts/validate-portfolio-ownership.ts'
+      - 'connectivity/api/lib/meta-validator.ts'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout chittyschema
+        uses: actions/checkout@v4
+        with:
+          path: chittyschema
+
+      - name: Checkout chittycanon (governance source of truth)
+        uses: actions/checkout@v4
+        with:
+          repository: CHITTYFOUNDATION/chittycanon
+          path: chittycanon
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: chittyschema/package-lock.json
+
+      - name: Install dependencies
+        working-directory: chittyschema
+        run: npm ci || npm install
+
+      - name: Validate portfolio ownership against meta-schemas
+        working-directory: chittyschema
+        env:
+          CANON_DIR: ${{ github.workspace }}/chittycanon/governance
+        run: npm run validate:portfolio-ownership
