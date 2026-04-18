@@ -1,30 +1,27 @@
 name: validate-manifest
 
 # Phase 1 step 6 of the schema policy: enforce the meta-schema in CI.
-# Any PR that touches development/chittyschema/database-config.json or any
-# meta-schema must pass `npm run validate:manifest` before merge.
+# Any PR that touches database-config.json or any meta-schema must pass
+# `npm run validate:manifest` before merge.
 
 on:
   push:
     branches: [main]
     paths:
-      - 'development/chittyschema/database-config.json'
-      - 'development/chittyschema/schemas/meta/**'
-      - 'development/chittyschema/scripts/validate-manifest.ts'
-      - 'development/chittyschema/api/lib/meta-validator.ts'
+      - 'database-config.json'
+      - 'identity/schemas/meta/**'
+      - 'identity/scripts/validate-manifest.ts'
+      - 'connectivity/api/lib/meta-validator.ts'
   pull_request:
     paths:
-      - 'development/chittyschema/database-config.json'
-      - 'development/chittyschema/schemas/meta/**'
-      - 'development/chittyschema/scripts/validate-manifest.ts'
-      - 'development/chittyschema/api/lib/meta-validator.ts'
+      - 'database-config.json'
+      - 'identity/schemas/meta/**'
+      - 'identity/scripts/validate-manifest.ts'
+      - 'connectivity/api/lib/meta-validator.ts'
 
 jobs:
   validate:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: development/chittyschema
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +29,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: development/chittyschema/package-lock.json
 
       - name: Install dependencies
         run: npm ci || npm install

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+identity/dist/
+*.log
+.env
+.env.local
+.DS_Store
+
+# Generated files
+src/generated/
+identity/src/generated/
+
+# Wrangler
+.wrangler/
+.wrangler-test/

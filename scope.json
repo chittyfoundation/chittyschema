@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.chitty.cc/meta/repo-scope.schema.json",
+  "scope_type": "service",
+  "characterization": "Service",
+  "status": "active",
+  "parent_scope_id": null,
+  "canon_uri": "chittycanon://core/services/chittyschema",
+  "owner_org": "CHITTYFOUNDATION",
+  "tier": 0,
+  "name": "chittyschema",
+  "description": "Schema governance service for the ChittyOS ecosystem. Serves callable schema definitions that all services validate against at runtime.",
+  "trinity": {
+    "identity": {
+      "src": "identity/src",
+      "agents": "identity/agents",
+      "scripts": "identity/scripts",
+      "schemas": "identity/schemas",
+      "docs": "identity/docs"
+    },
+    "authority": {
+      "charter": "CHARTER.md",
+      "chitty": "CHITTY.md",
+      "claude": "CLAUDE.md",
+      "canon": "authority/canon",
+      "certifications": "authority/certifications",
+      "owners": "authority/owners"
+    },
+    "connectivity": {
+      "api": "connectivity/api",
+      "integrations": "connectivity/integrations",
+      "migrations": "connectivity/migrations",
+      "releases": "connectivity/releases",
+      "deployments": "connectivity/deployments",
+      "consumers": "connectivity/consumers",
+      "upstreams": "connectivity/upstreams"
+    }
+  },
+  "inherits": {
+    "identity": false,
+    "authority": false,
+    "connectivity": false
+  },
+  "registered_with": [
+    "chittyregister",
+    "chittyschema",
+    "chittycertify"
+  ]
+}

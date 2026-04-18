@@ -1,0 +1,95 @@
+{
+  "name": "@chittyos/schema",
+  "version": "0.1.1",
+  "description": "Universal data framework and schema definitions for ChittyOS - automatically generates types, validators, and documentation from live database",
+  "main": "identity/dist/index.js",
+  "types": "identity/dist/index.d.ts",
+  "type": "module",
+  "bin": {
+    "chittyschema": "./identity/cli.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch identity/src/index.ts",
+    "dev:api": "wrangler dev connectivity/api/index.ts",
+    "build": "tsc && tsc-alias",
+    "build:api": "tsc && tsc-alias",
+    "introspect": "tsx identity/scripts/introspect-all.ts",
+    "introspect:single": "tsx identity/scripts/introspect-schema.ts",
+    "generate": "npm run introspect && npm run generate:types && npm run generate:validators && npm run generate:docs",
+    "generate:types": "tsx identity/scripts/generate-types-multi.ts",
+    "generate:types:single": "tsx identity/scripts/generate-types.ts",
+    "generate:validators": "tsx identity/scripts/generate-validators-multi.ts",
+    "generate:validators:single": "tsx identity/scripts/generate-validators.ts",
+    "generate:docs": "tsx identity/scripts/generate-docs-multi.ts",
+    "generate:docs:single": "tsx identity/scripts/generate-docs.ts",
+    "validate": "tsx identity/scripts/validate-schema.ts",
+    "validate:manifest": "tsx identity/scripts/validate-manifest.ts",
+    "validate:service": "tsx identity/scripts/validate-service-compliance.ts",
+    "validate:portfolio-ownership": "tsx identity/scripts/validate-portfolio-ownership.ts",
+    "certify": "tsx identity/scripts/validate-service-compliance.ts",
+    "migration:create": "tsx identity/scripts/create-migration.ts",
+    "migration:apply": "tsx identity/scripts/apply-migration.ts",
+    "migration:rollback": "tsx identity/scripts/rollback-migration.ts",
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint identity/src --ext .ts",
+    "format": "prettier --write \"identity/src/**/*.ts\"",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "chittyos",
+    "schema",
+    "typescript",
+    "postgresql",
+    "types",
+    "validation",
+    "zod"
+  ],
+  "author": "Chitty Foundation",
+  "license": "MIT",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "hono": "^4.0.0",
+    "pg": "^8.11.3",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "@types/pg": "^8.10.9",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.2",
+    "pg-to-ts": "^4.1.1",
+    "prettier": "^3.2.4",
+    "tsc-alias": "^1.8.8",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.1"
+  },
+  "files": [
+    "identity/dist",
+    "identity/src",
+    "identity/agents",
+    "connectivity/api",
+    "connectivity/migrations",
+    "scope.json",
+    "database-config.json",
+    "CHARTER.md",
+    "CHITTY.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chittyfoundation/chittyschema.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  }
+}
