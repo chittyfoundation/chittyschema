@@ -12,6 +12,7 @@
 export * from './items';
 export * from './chain-of-custody';
 export * from './witnesses';
+export * from './source-canonical';
 
 // Re-export for convenience
 export type {
@@ -47,3 +48,13 @@ export type {
   WitnessBias,
   WitnessPreparation,
 } from './witnesses';
+
+export type {
+  SourceCanonical,
+  SourceCanonicalInsert,
+  SourceCanonicalUpdate,
+  SourceCanonicalQueryOptions,
+  SourceType,
+  IntakeStatus,
+  ExportFormat,
+} from './source-canonical';
