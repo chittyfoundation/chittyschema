@@ -13,3 +13,10 @@ identity/src/generated/
 # Wrangler
 .wrangler/
 .wrangler-test/
+
+# Build artifacts
+connectivity/dist/
+*.tgz
+
+# Local Claude state — worktrees, settings, transient artifacts
+.claude/

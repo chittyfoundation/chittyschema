@@ -162,13 +162,23 @@ class TrustEventsInsert(BaseModel):
 `;
   }
 
-  // Generic model for other tables
-  // Try to materialize fields from metadata.columns when available
-  const fields = Array.isArray(metadata.columns) && metadata.columns.length > 0
-    ? metadata.columns
-        .map((c) => `    ${c.name}: ${pyType(c.type)}${c.optional || c.nullable ? ' | None' : ''}`)
-        .join('\n')
-    : `    # TODO: Add fields based on actual schema introspection\n    id: Optional[UUID] = None\n    created_at: Optional[datetime] = None\n    updated_at: Optional[datetime] = None`;
+  // Generic model for other tables. We refuse to emit a stub-with-TODO
+  // model — that would ship a placeholder downstream. If introspection
+  // hasn't yielded columns for this table, fail loud so the caller knows
+  // to run `npm run introspect` (or fix the validator generation) first.
+  if (!Array.isArray(metadata.columns) || metadata.columns.length === 0) {
+    throw new Error(
+      `generatePydanticModel: no columns metadata for ${tableName}. ` +
+        `Run schema introspection / validator generation before requesting ` +
+        `generated types.`
+    );
+  }
+  const fields = metadata.columns
+    .map(
+      (c) =>
+        `    ${c.name}: ${pyType(c.type)}${c.optional || c.nullable ? ' | None' : ''}`
+    )
+    .join('\n');
 
   return `"""
 Auto-generated Pydantic model for ${tableName} table
@@ -203,12 +213,19 @@ export function generateTypeScript(tableName: string, metadata: TableMetadata): 
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join('');
 
-  // Build fields from metadata.columns when available
-  const fields = Array.isArray(metadata.columns) && metadata.columns.length > 0
-    ? metadata.columns
-        .map((c) => `  ${c.name}${c.optional ? '?' : ''}: ${tsType(c.type)}${c.nullable ? ' | null' : ''};`)
-        .join('\n')
-    : `  id?: string;\n  // TODO: Add fields from schema introspection\n  created_at?: Date | string;\n  updated_at?: Date | string;`;
+  if (!Array.isArray(metadata.columns) || metadata.columns.length === 0) {
+    throw new Error(
+      `generateTypeScript: no columns metadata for ${tableName}. ` +
+        `Run schema introspection / validator generation before requesting ` +
+        `generated types.`
+    );
+  }
+  const fields = metadata.columns
+    .map(
+      (c) =>
+        `  ${c.name}${c.optional ? '?' : ''}: ${tsType(c.type)}${c.nullable ? ' | null' : ''};`
+    )
+    .join('\n');
 
   return `/**
  * Auto-generated TypeScript types for ${tableName} table
@@ -239,12 +256,19 @@ export function generateZodSchema(tableName: string, metadata: TableMetadata): s
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join('');
 
-  // Build Zod object from metadata.columns when available
-  const shape = Array.isArray(metadata.columns) && metadata.columns.length > 0
-    ? metadata.columns
-        .map((c) => `  ${c.name}: ${zodType(c.type)}${c.nullable ? '.nullable()' : ''}${c.optional ? '.optional()' : ''}`)
-        .join(',\n')
-    : `  id: z.string().uuid().optional(),\n  // TODO: Add fields from schema introspection\n  created_at: z.coerce.date().optional(),\n  updated_at: z.coerce.date().optional()`;
+  if (!Array.isArray(metadata.columns) || metadata.columns.length === 0) {
+    throw new Error(
+      `generateZodSchema: no columns metadata for ${tableName}. ` +
+        `Run schema introspection / validator generation before requesting ` +
+        `generated types.`
+    );
+  }
+  const shape = metadata.columns
+    .map(
+      (c) =>
+        `  ${c.name}: ${zodType(c.type)}${c.nullable ? '.nullable()' : ''}${c.optional ? '.optional()' : ''}`
+    )
+    .join(',\n');
 
   return `/**
  * Auto-generated Zod validators for ${tableName} table

@@ -42,6 +42,7 @@ This repo follows the ChittyOS fractal trinity layout (identity / authority / co
 │   │   └── routes/              # generate / meta / owners / registry / tables / validate
 │   ├── integrations/            # outbound hooks (chittyregister-hook)
 │   ├── migrations/              # SQL per database (chittycanon, chittyledger, chittyos-core, chittyfinance)
+│   │   └── DATABASE_ARCHITECTURE.md  # BINDING: what goes in Core vs per-service DBs
 │   ├── releases/                # CHANGELOG, version notes
 │   ├── deployments/             # deploy logs, beacon reports
 │   ├── consumers/               # downstream services (populated from Owner Manifest)

@@ -78,33 +78,23 @@ registryRoute.get('/', async (c) => {
   const kv = c.env.REGISTRY_KV;
 
   if (!kv) {
-    // Return hardcoded example until KV is set up
-    return c.json({
-      message: 'Registry KV not configured - showing example data',
-      services: [
-        {
-          serviceName: 'chittyauth-app',
-          organization: 'chittyapps',
-          tier: 2,
-          storageType: 'd1',
-          validation: {
-            status: 'validated',
-            badge_url: 'https://img.shields.io/badge/ChittySchema-Validated-green'
-          }
-        }
-      ],
-      count: 1
-    });
+    return c.json(
+      { success: false, error: 'REGISTRY_KV binding is not configured' },
+      503
+    );
   }
 
-  // TODO: Implement KV listing
   const list = await kv.list({ prefix: 'registry:' });
-  const services = [];
+  const services: SchemaRegistration[] = [];
 
   for (const key of list.keys) {
     const value = await kv.get(key.name);
     if (value) {
-      services.push(JSON.parse(value));
+      try {
+        services.push(JSON.parse(value) as SchemaRegistration);
+      } catch {
+        // Skip corrupt entries; don't fail the whole listing
+      }
     }
   }
 
@@ -112,10 +102,10 @@ registryRoute.get('/', async (c) => {
     services,
     count: services.length,
     tiers: {
-      tier1: services.filter(s => s.tier === 1).length,
-      tier2: services.filter(s => s.tier === 2).length,
-      tier3: services.filter(s => s.tier === 3).length
-    }
+      tier1: services.filter((s) => s.tier === 1).length,
+      tier2: services.filter((s) => s.tier === 2).length,
+      tier3: services.filter((s) => s.tier === 3).length,
+    },
   });
 });
 
@@ -125,44 +115,10 @@ registryRoute.get('/:serviceName', async (c) => {
   const kv = c.env.REGISTRY_KV;
 
   if (!kv) {
-    // Return hardcoded example for chittyauth-app
-    if (serviceName === 'chittyauth-app') {
-      return c.json({
-        serviceName: 'chittyauth-app',
-        organization: 'chittyapps',
-        tier: 2,
-        storageType: 'd1',
-        schemaLocation: 'https://github.com/chittyapps/chittyauth-app/blob/main/schema.sql',
-        schemaVersion: '1.1.0',
-        deployment: {
-          production: 'https://auth-app.chitty.cc'
-        },
-        compliance: {
-          temporal_versioning: true,
-          gdpr_compliant: true,
-          audit_logging: true,
-          security_validated: true
-        },
-        patterns: {
-          naming_convention: 'custom',
-          primary_key_pattern: 'id (UUID)',
-          index_strategy: 'optimized for D1'
-        },
-        validation: {
-          status: 'validated',
-          last_validated: new Date().toISOString(),
-          badge_url: 'https://img.shields.io/badge/ChittySchema-Validated-green'
-        },
-        metadata: {
-          description: 'Standalone Authentication & Token Provisioning Application',
-          repository: 'https://github.com/chittyapps/chittyauth-app',
-          created_at: '2025-11-06T00:00:00Z',
-          updated_at: new Date().toISOString()
-        }
-      });
-    }
-
-    return c.json({ error: 'Service not found' }, 404);
+    return c.json(
+      { success: false, error: 'REGISTRY_KV binding is not configured' },
+      503
+    );
   }
 
   const value = await kv.get(`registry:${serviceName}`);
@@ -228,15 +184,10 @@ registryRoute.post('/register', async (c) => {
   };
 
   if (!kv) {
-    return c.json({
-      message: 'Registry KV not configured - registration simulated',
-      registration,
-      next_steps: [
-        'Configure REGISTRY_KV in wrangler.toml',
-        'Run compliance validation',
-        'Deploy to production'
-      ]
-    });
+    return c.json(
+      { success: false, error: 'REGISTRY_KV binding is not configured' },
+      503
+    );
   }
 
   // Store in KV
@@ -365,24 +316,38 @@ registryRoute.get('/:serviceName/badge', async (c) => {
   const serviceName = c.req.param('serviceName');
   const kv = c.env.REGISTRY_KV;
 
+  if (!kv) {
+    return c.json(
+      { success: false, error: 'REGISTRY_KV binding is not configured' },
+      503
+    );
+  }
+
   let status = 'unknown';
   let color = 'lightgrey';
 
-  if (kv) {
-    const value = await kv.get(`registry:${serviceName}`);
-    if (value) {
+  const value = await kv.get(`registry:${serviceName}`);
+  if (value) {
+    try {
       const registration = JSON.parse(value) as SchemaRegistration;
       status = registration.validation.status;
-      color = status === 'validated' ? 'green' :
-              status === 'pending' ? 'yellow' :
-              status === 'non_compliant' ? 'red' : 'lightgrey';
+      color =
+        status === 'validated'
+          ? 'green'
+          : status === 'pending'
+            ? 'yellow'
+            : status === 'non_compliant'
+              ? 'red'
+              : 'lightgrey';
+    } catch {
+      // Corrupt KV entry — keep "unknown"/"lightgrey"
     }
-  } else if (serviceName === 'chittyauth-app') {
-    status = 'validated';
-    color = 'green';
   }
 
-  // Return SVG badge
+  // Escape status text for safe SVG injection (defense in depth — status
+  // values come from a closed enum, but the underlying KV could be tampered).
+  const safeStatus = status.replace(/[<>&"']/g, '');
+
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="180" height="20">
       <linearGradient id="b" x2="0" y2="100%">
@@ -400,8 +365,8 @@ registryRoute.get('/:serviceName/badge', async (c) => {
       <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
         <text x="47.5" y="15" fill="#010101" fill-opacity=".3">ChittySchema</text>
         <text x="47.5" y="14">ChittySchema</text>
-        <text x="137.5" y="15" fill="#010101" fill-opacity=".3">${status}</text>
-        <text x="137.5" y="14">${status}</text>
+        <text x="137.5" y="15" fill="#010101" fill-opacity=".3">${safeStatus}</text>
+        <text x="137.5" y="14">${safeStatus}</text>
       </g>
     </svg>
   `.trim();
@@ -411,96 +376,117 @@ registryRoute.get('/:serviceName/badge', async (c) => {
   return c.body(svg);
 });
 
-// Get compliance report for a service
+/**
+ * Compliance report for a registered service.
+ *
+ * Renders the persisted ComplianceCheck (from POST /validate/:serviceName)
+ * as HTML. No hardcoded scores, no fixture services — if the registry
+ * has no record, return 404. If the record exists but no validation
+ * has been run yet, render the "pending" state explicitly.
+ */
 registryRoute.get('/:serviceName/compliance', async (c) => {
   const serviceName = c.req.param('serviceName');
   const kv = c.env.REGISTRY_KV;
 
-  if (!kv && serviceName !== 'chittyauth-app') {
+  if (!kv) {
+    return c.json(
+      { success: false, error: 'REGISTRY_KV binding is not configured' },
+      503
+    );
+  }
+
+  const value = await kv.get(`registry:${serviceName}`);
+  if (!value) {
     return c.json({ error: 'Service not found' }, 404);
   }
 
-  // Return HTML compliance report
+  let registration: SchemaRegistration;
+  try {
+    registration = JSON.parse(value) as SchemaRegistration;
+  } catch {
+    return c.json({ error: 'Corrupt registry entry' }, 500);
+  }
+
+  const escape = (s: string): string =>
+    s.replace(/[&<>"']/g, (ch) =>
+      ch === '&'
+        ? '&amp;'
+        : ch === '<'
+          ? '&lt;'
+          : ch === '>'
+            ? '&gt;'
+            : ch === '"'
+              ? '&quot;'
+              : '&#39;'
+    );
+
+  const status = registration.validation.status;
+  const badgeColor =
+    status === 'validated'
+      ? 'green'
+      : status === 'pending'
+        ? 'yellow'
+        : status === 'non_compliant'
+          ? 'red'
+          : 'lightgrey';
+  const lastValidated = registration.validation.last_validated || 'never';
+  const compliance = registration.compliance;
+
+  const checkRow = (passed: boolean, label: string) =>
+    `<div class="check ${passed ? 'pass' : 'fail'}">${
+      passed ? '✅' : '❌'
+    } ${escape(label)}</div>`;
+
   const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${serviceName} - ChittySchema Compliance Report</title>
+  <title>${escape(serviceName)} - ChittySchema Compliance Report</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-    .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 30px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 0.9em;
-      font-weight: 600;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 8px; margin-bottom: 20px; }
+    .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 0.9em; font-weight: 600; }
     .badge.green { background: #10b981; color: white; }
     .badge.yellow { background: #f59e0b; color: white; }
     .badge.red { background: #ef4444; color: white; }
+    .badge.lightgrey { background: #9ca3af; color: white; }
     .check { margin: 10px 0; }
     .check.pass { color: #10b981; }
     .check.fail { color: #ef4444; }
+    .meta { font-size: 0.85em; opacity: 0.9; }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>${serviceName}</h1>
+    <h1>${escape(serviceName)}</h1>
     <p>ChittySchema Compliance Report</p>
-    <span class="badge green">Validated</span>
-    <span class="badge green">Score: 85/100</span>
+    <span class="badge ${badgeColor}">${escape(status)}</span>
+    <p class="meta">Last validated: ${escape(lastValidated)}</p>
+    <p class="meta">Tier ${registration.tier} · ${escape(registration.organization)} · ${escape(registration.storageType)}</p>
   </div>
 
   <div class="card">
-    <h2>Required Checks (3/3)</h2>
-    <div class="check pass">✅ Temporal versioning (updated_at, deleted_at)</div>
-    <div class="check pass">✅ Audit logging (comprehensive)</div>
-    <div class="check pass">✅ Security hashing (no plaintext secrets)</div>
+    <h2>Compliance Facts</h2>
+    ${checkRow(compliance.temporal_versioning, 'Temporal versioning (updated_at, deleted_at)')}
+    ${checkRow(compliance.audit_logging, 'Audit logging')}
+    ${checkRow(compliance.security_validated, 'Security validated (no plaintext secrets)')}
+    ${checkRow(compliance.gdpr_compliant, 'GDPR compliance')}
   </div>
 
   <div class="card">
-    <h2>Recommended Checks (4/5)</h2>
-    <div class="check pass">✅ Indexed queries</div>
-    <div class="check pass">✅ GDPR compliance</div>
-    <div class="check pass">✅ Performance optimized</div>
-    <div class="check pass">✅ Documentation complete</div>
-    <div class="check fail">⚠️ ChittyOS naming convention (uses 'id' instead of 'chitty_id' - acceptable for D1)</div>
-  </div>
-
-  <div class="card">
-    <h2>Optional Checks (2/4)</h2>
-    <div class="check pass">✅ Edge optimized</div>
-    <div class="check pass">✅ KV caching</div>
-    <div class="check fail">ℹ️ ChittyLedger integration (not required for standalone)</div>
-    <div class="check fail">ℹ️ PostgreSQL compatibility (D1/SQLite only)</div>
+    <h2>Run a Fresh Validation</h2>
+    <pre><code>curl -X POST https://schema.chitty.cc/api/registry/validate/${escape(serviceName)} \\
+  -H 'Content-Type: application/json' \\
+  -d '{"repoUrl":"${escape(registration.metadata?.repository ?? 'https://github.com/...')}"}'</code></pre>
   </div>
 
   <div class="card">
     <h2>Badge</h2>
-    <img src="/api/registry/${serviceName}/badge" alt="ChittySchema Badge">
-    <pre><code>[![ChittySchema Validated](https://schema.chitty.cc/api/registry/${serviceName}/badge)](https://schema.chitty.cc/registry/${serviceName})</code></pre>
+    <img src="/api/registry/${escape(serviceName)}/badge" alt="ChittySchema Badge">
+    <pre><code>[![ChittySchema ${escape(status)}](https://schema.chitty.cc/api/registry/${escape(serviceName)}/badge)](https://schema.chitty.cc/api/registry/${escape(serviceName)}/compliance)</code></pre>
   </div>
 </body>
 </html>
