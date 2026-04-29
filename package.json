@@ -1,6 +1,6 @@
 {
   "name": "@chittyos/schema",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Universal data framework and schema definitions for ChittyOS - automatically generates types, validators, and documentation from live database",
   "main": "identity/dist/index.js",
   "types": "identity/dist/index.d.ts",
@@ -11,8 +11,9 @@
   "scripts": {
     "dev": "tsx watch identity/src/index.ts",
     "dev:api": "wrangler dev connectivity/api/index.ts",
-    "build": "tsc && tsc-alias",
+    "build": "tsc && tsc-alias && tsc -p connectivity/tsconfig.json",
     "build:api": "tsc && tsc-alias",
+    "build:connectivity": "tsc -p connectivity/tsconfig.json",
     "introspect": "tsx identity/scripts/introspect-all.ts",
     "introspect:single": "tsx identity/scripts/introspect-schema.ts",
     "generate": "npm run introspect && npm run generate:types && npm run generate:validators && npm run generate:docs",
@@ -27,6 +28,7 @@
     "validate:service": "tsx identity/scripts/validate-service-compliance.ts",
     "validate:portfolio-ownership": "tsx identity/scripts/validate-portfolio-ownership.ts",
     "validate:fractal": "tsx identity/scripts/validate-fractal-layout.ts",
+    "validate:fractal-scopes": "tsx identity/scripts/validate-fractal-scopes.ts",
     "certify": "tsx identity/scripts/validate-service-compliance.ts",
     "migration:create": "tsx identity/scripts/create-migration.ts",
     "migration:apply": "tsx identity/scripts/apply-migration.ts",
@@ -73,10 +75,21 @@
     "typescript": "^5.3.3",
     "vitest": "^1.2.1"
   },
+  "exports": {
+    ".": {
+      "import": "./identity/dist/index.js",
+      "types": "./identity/dist/index.d.ts"
+    },
+    "./scope-projector": {
+      "import": "./connectivity/dist/scope-projector.js",
+      "types": "./connectivity/dist/scope-projector.d.ts"
+    }
+  },
   "files": [
     "identity/dist",
     "identity/src",
     "identity/agents",
+    "connectivity/dist",
     "connectivity/api",
     "connectivity/migrations",
     "scope.json",
