@@ -42,22 +42,8 @@ jobs:
       - name: Run type checks
         run: npm run typecheck --if-present
 
-  # Real-Miniflare integration test suite (vitest)
-  # Doctrine guard: chittycanon://gov/governance#no-mocks-no-fakes
-  # Without this gate the integration suite added in PR #29 can silently regress.
-  tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run vitest integration suite
-        run: npm test
+  # NOTE: The vitest integration suite runs as its own standalone workflow
+  # in .github/workflows/tests.yml. It is intentionally NOT inside this
+  # file because ci.yml depends on a reusable workflow upstream that
+  # currently fails at dispatch — any job defined here inherits that
+  # dispatch failure and never actually runs. See tests.yml for context.
