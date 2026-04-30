@@ -1,0 +1,38 @@
+# Standalone test gate — independent of the reusable CI pipeline.
+#
+# Why this exists as its own file: ci.yml depends on
+# chittyfoundation/.github/.github/workflows/reusable-ci-pipeline.yml@main,
+# which has been failing at dispatch for weeks. Any test gate added to
+# ci.yml inherits that failure and never actually runs. This workflow
+# is intentionally self-contained so the npm-test gate cannot be
+# silently nullified by upstream workflow-file issues.
+#
+# Doctrine: chittycanon://gov/governance#no-mocks-no-fakes — a
+# non-running CI job is the same shape of lie as mocked test data.
+
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  vitest:
+    name: vitest (real-Miniflare integration suite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run vitest
+        run: npm test
