@@ -20,7 +20,7 @@ export function setupOutputStyle(): () => void {
   // Keep console.error for visibility on failures
   // Suppress console.log spam for compact output
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  console.log = () => {} as any;
+  console.log = (() => {}) as any;
 
   return () => {
     console.log = originalLog as any;
