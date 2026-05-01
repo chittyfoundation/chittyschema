@@ -1,137 +1,91 @@
 # ChittyOS-Core Database Migrations
 
-## Running Migrations
+Migration manifest for the chittyos-core Neon database (project `restless-grass-40598426`).
 
-### Prerequisites
+## Active migrations
 
-1. **Database Access**: You need `CHITTYOS_CORE_DB_URL` or `NEON_DATABASE_URL` environment variable set
-2. **psql CLI**: PostgreSQL client installed (`brew install postgresql` on macOS)
-3. **Permissions**: Database user must have ALTER TABLE privileges
+| File | Applied to prod | Notes |
+|---|---|---|
+| `002_fractal_scopes.sql` | ✅ | Adds `scopes` / `scope_artifacts` / `scope_events` / `scope_parties` tables for the fractal scopes primitive |
+| `003_service_registrations_private_endpoint.sql` | ✅ (PR #34) | Adds `private_endpoint` JSONB column to `service_registrations` for Tailscale Services discovery |
+| `004_trust_scores_ty_vy_ry.sql` | ✅ (2026-05-01) | Adds TY/VY/RY columns to `trust_scores` per White Paper v2.1. Additive — old pre-6D columns (`base_score`, etc.) coexist until consumers migrate |
 
-### Method 1: Using psql (Recommended)
+## Archived
 
-```bash
-# Set environment variable
-export NEON_DATABASE_URL="postgresql://user:pass@host.neon.tech/chittyos-core?sslmode=require"
+`_archive/001_upgrade_trust_scores_to_6d.sql` — authored 2025-11-08 but never applied. The 6D scoring model was superseded by TY/VY/RY before adoption. See `_archive/README.md` for context.
 
-# Run migration
-psql $NEON_DATABASE_URL -f migrations/chittyos-core/001_upgrade_trust_scores_to_6d.sql
+## Running a new migration
 
-# Verify
-psql $NEON_DATABASE_URL -c "\d trust_scores"
-psql $NEON_DATABASE_URL -c "\d trust_events"
+### Method 1: Neon MCP (recommended for Claude / agent flows)
+
+Each migration must validate against a fresh disposable Neon branch off the production parent before applying to production, per `chittycanon://gov/governance#no-mocks-no-fakes`. Pattern:
+
+```
+1. mcp_create_branch  → off production parent
+2. run migration on the disposable branch via run_sql / run_sql_transaction
+3. verify shape with describe_table_schema
+4. mcp_delete_branch  → tear down
+5. apply same SQL to production default branch
+6. verify shape on production
 ```
 
-### Method 2: Using Node.js Script
+### Method 2: psql
 
 ```bash
-# Install dependencies
-npm install @neondatabase/serverless
+export CHITTYOS_CORE_DB_URL="postgresql://user:pass@host.neon.tech/chittyos-core?sslmode=require"
 
-# Create and run migration script
+# Always run against a Neon branch first; only after green run on default:
+psql $CHITTYOS_CORE_DB_URL -f connectivity/migrations/chittyos-core/<NNN>_<name>.sql
+```
+
+### Method 3: Node.js script
+
+```bash
 node << 'EOF'
 const { neon } = require('@neondatabase/serverless');
 const fs = require('fs');
 
-const sql = neon(process.env.NEON_DATABASE_URL);
-const migration = fs.readFileSync('migrations/chittyos-core/001_upgrade_trust_scores_to_6d.sql', 'utf8');
+const sql = neon(process.env.CHITTYOS_CORE_DB_URL);
+const migration = fs.readFileSync(
+  'connectivity/migrations/chittyos-core/<NNN>_<name>.sql',
+  'utf8',
+);
 
 (async () => {
   try {
     await sql(migration);
-    console.log('✅ Migration complete!');
+    console.log('Migration complete');
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    console.error('Migration failed:', error);
+    process.exit(1);
   }
 })();
 EOF
 ```
 
-### Method 3: Via Neon Console
+## After applying a migration
 
-1. Go to https://console.neon.tech
-2. Select `chittyos-core` database
-3. Open SQL Editor
-4. Copy/paste contents of `001_upgrade_trust_scores_to_6d.sql`
-5. Execute
-
-## After Migration
-
-1. **Regenerate Types**:
+1. Regenerate types and validators:
    ```bash
-   cd /path/to/chittyschema
-   npm run introspect
+   npm run introspect       # against the manifested CHITTYOS_CORE_DB_URL
    npm run generate:types
+   npm run generate:validators
    ```
 
-2. **Verify New Schema**:
+2. Verify schema parity:
    ```bash
-   psql $NEON_DATABASE_URL -c "
-   SELECT column_name, data_type
-   FROM information_schema.columns
-   WHERE table_name = 'trust_scores'
-   ORDER BY ordinal_position;
+   psql $CHITTYOS_CORE_DB_URL -c "
+     SELECT column_name, data_type
+     FROM information_schema.columns
+     WHERE table_name = '<table>'
+     ORDER BY ordinal_position;
    "
    ```
 
-3. **Check trust_events Table**:
-   ```bash
-   psql $NEON_DATABASE_URL -c "\d trust_events"
-   ```
+3. Update the table above with the applied date.
 
-4. **Publish Updated Schema**:
-   ```bash
-   npm version minor
-   npm run build
-   npm publish
-   ```
+## Doctrine
 
-## Rollback (If Needed)
-
-If the migration fails or needs to be reversed:
-
-```sql
--- Drop new columns
-ALTER TABLE trust_scores
-  DROP COLUMN IF EXISTS source_dimension,
-  DROP COLUMN IF EXISTS temporal_dimension,
-  DROP COLUMN IF EXISTS channel_dimension,
-  DROP COLUMN IF EXISTS outcome_dimension,
-  DROP COLUMN IF EXISTS network_dimension,
-  DROP COLUMN IF EXISTS justice_dimension,
-  DROP COLUMN IF EXISTS people_score,
-  DROP COLUMN IF EXISTS legal_score,
-  DROP COLUMN IF EXISTS state_score,
-  DROP COLUMN IF EXISTS chitty_score,
-  DROP COLUMN IF EXISTS composite_score,
-  DROP COLUMN IF EXISTS trust_level,
-  DROP COLUMN IF EXISTS confidence,
-  DROP COLUMN IF EXISTS ai_enhanced,
-  DROP COLUMN IF EXISTS insights;
-
--- Drop trust_events table
-DROP TABLE IF EXISTS trust_events;
-
--- Restore from legacy columns (if they exist)
-UPDATE trust_scores
-SET
-  base_score = legacy_base_score,
-  history_score = legacy_history_score,
-  network_score = legacy_network_score,
-  risk_penalty = legacy_risk_penalty,
-  final_score = legacy_final_score
-WHERE legacy_base_score IS NOT NULL;
-```
-
-## Migration Status
-
-- [x] Migration file created: `001_upgrade_trust_scores_to_6d.sql`
-- [ ] Migration executed on database
-- [ ] Types regenerated from database
-- [ ] ChittyScore Flask app updated
-- [ ] Tests passing with new schema
-- [ ] Legacy columns removed (after confirmation)
-
-## Questions?
-
-Contact the ChittySchema maintainer or database admin before running migrations on production.
+- Every migration is validated against real Neon (disposable branch) before applying to production. No mock data, no skipped validation.
+- Migrations are additive by default. Column drops happen in a follow-up migration once all consumers have cut over.
+- The `connectivity/migrations/<db>/` directory is the manifest. `_archive/` is for files kept as historical record but not to be run.
