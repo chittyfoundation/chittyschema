@@ -28,6 +28,28 @@ export interface ServiceRegistrations {
   metadata?: Record<string, any>;
   created_at?: Date | string;
   updated_at?: Date | string;
+  /** Optional public base URL for the service. */
+  base_url?: string | null;
+  /**
+   * Optional private-mesh endpoint descriptor. NULL for public-only services.
+   * When set, must contain transport (discriminator), service, magic_dns, ports[].
+   * Today only transport="tailscale" is supported, enforced by
+   * service_registrations_private_endpoint_shape CHECK constraint.
+   * See chittycanon://infrastructure/network/tailscale-services.
+   */
+  private_endpoint?: PrivateEndpoint | null;
+}
+
+/**
+ * Private-mesh endpoint shape enforced by the
+ * service_registrations_private_endpoint_shape CHECK constraint.
+ */
+export interface PrivateEndpoint {
+  transport: 'tailscale';
+  service: string;
+  magic_dns: string;
+  ports: number[];
+  [key: string]: any;
 }
 
 /**
