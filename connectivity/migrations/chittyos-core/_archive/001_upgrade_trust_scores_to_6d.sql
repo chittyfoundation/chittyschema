@@ -1,3 +1,15 @@
+-- ============================================================================
+-- ARCHIVED — DO NOT RUN
+-- ============================================================================
+-- This migration was authored 2025-11-08 but never applied to production.
+-- The 6D scoring model was superseded before adoption by the TY/VY/RY model
+-- (White Paper v2.1), implemented by 004_trust_scores_ty_vy_ry.sql in the
+-- parent directory. Production trust_scores went from the original pre-6D
+-- shape (base_score / history_score / network_score / risk_penalty /
+-- final_score) directly to the additive TY/VY/RY columns — skipping 6D
+-- entirely. Kept here as historical record only. See _archive/README.md.
+-- ============================================================================
+--
 -- Migration: Upgrade trust_scores to 6D Behavioral Trust Scoring Model
 -- Service: ChittyScore (formerly ChittyTrust)
 -- Date: 2025-11-08
