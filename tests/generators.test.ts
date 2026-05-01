@@ -44,12 +44,20 @@ describe('generatePydanticModel', () => {
     ).toThrow(/no columns metadata for whatever/);
   });
 
-  it('emits the trust_scores special-case unchanged', () => {
+  it('does NOT special-case trust_scores anymore — goes through generic introspection path', () => {
+    // Before this PR, trust_scores returned a hardcoded 6D Pydantic model
+    // (source_dimension / temporal_dimension / ... / justice_dimension). That
+    // shape never existed in production — the canonical model is TY/VY/RY per
+    // White Paper v2.1. The hardcode emitted code that matched no live schema.
+    // Now trust_scores goes through the generic columns-driven path like
+    // every other table.
     const code = generatePydanticModel('trust_scores', baseMetadata);
-    // The 6D trust model has its own canonical shape — verify it stays.
     expect(code).toContain('class TrustScores(BaseModel)');
-    expect(code).toContain('source_dimension');
-    expect(code).toContain('justice_dimension');
+    // The generic path emits columns from the metadata fixture, not a 6D shape.
+    expect(code).not.toContain('source_dimension');
+    expect(code).not.toContain('justice_dimension');
+    expect(code).toContain('id: UUID | None');
+    expect(code).toContain('name: str');
   });
 });
 
