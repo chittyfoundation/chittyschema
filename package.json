@@ -105,6 +105,6 @@
     "url": "https://github.com/chittyfoundation/chittyschema.git"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
+    "access": "public"
   }
 }
