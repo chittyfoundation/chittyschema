@@ -383,6 +383,24 @@
         "negotiation_sessions": "chittyresolution",
         "offers": "chittyresolution"
       }
+    },
+    {
+      "name": "chittyharvest",
+      "description": "Garden IO bridge state — gardens, threads, messages, identity links, adapter runs. Local SoR for cross-garden communication; never stores credentials, never canonical for identity authority.",
+      "envVar": "CHITTYHARVEST_DB_URL",
+      "owner": "ChittyHarvest",
+      "services": [
+        "chittyharvest"
+      ],
+      "tables": {
+        "gardens": "chittyharvest",
+        "garden_accounts": "chittyharvest",
+        "threads": "chittyharvest",
+        "messages": "chittyharvest",
+        "identity_links": "chittyharvest",
+        "harvest_events": "chittyharvest",
+        "adapter_runs": "chittyharvest"
+      }
     }
   ],
   "tableOwners": [
@@ -1766,6 +1784,83 @@
       "legalHold": true,
       "stewards": "@chittyapps/resolution",
       "notes": "Offers and counter-offers exchanged in negotiation. Event/Decision."
+    },
+    {
+      "table": "gardens",
+      "database": "chittyharvest",
+      "service": "chittyharvest",
+      "repo": "CHITTYFOUNDATION/chittyharvest",
+      "authoringFile": "connectivity/migrations/0001_initial.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/harvest"
+    },
+    {
+      "table": "garden_accounts",
+      "database": "chittyharvest",
+      "service": "chittyharvest",
+      "repo": "CHITTYFOUNDATION/chittyharvest",
+      "authoringFile": "connectivity/migrations/0001_initial.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/harvest"
+    },
+    {
+      "table": "threads",
+      "database": "chittyharvest",
+      "service": "chittyharvest",
+      "repo": "CHITTYFOUNDATION/chittyharvest",
+      "authoringFile": "connectivity/migrations/0001_initial.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/harvest"
+    },
+    {
+      "table": "messages",
+      "database": "chittyharvest",
+      "service": "chittyharvest",
+      "repo": "CHITTYFOUNDATION/chittyharvest",
+      "authoringFile": "connectivity/migrations/0001_initial.sql",
+      "canonType": "E",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/harvest"
+    },
+    {
+      "table": "identity_links",
+      "database": "chittyharvest",
+      "service": "chittyharvest",
+      "repo": "CHITTYFOUNDATION/chittyharvest",
+      "authoringFile": "connectivity/migrations/0001_initial.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/harvest"
+    },
+    {
+      "table": "harvest_events",
+      "database": "chittyharvest",
+      "service": "chittyharvest",
+      "repo": "CHITTYFOUNDATION/chittyharvest",
+      "authoringFile": "connectivity/migrations/0001_initial.sql",
+      "canonType": "E",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/harvest"
+    },
+    {
+      "table": "adapter_runs",
+      "database": "chittyharvest",
+      "service": "chittyharvest",
+      "repo": "CHITTYFOUNDATION/chittyharvest",
+      "authoringFile": "connectivity/migrations/0001_initial.sql",
+      "canonType": "E",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/harvest"
     }
   ]
 }
