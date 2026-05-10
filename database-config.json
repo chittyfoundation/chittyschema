@@ -55,8 +55,6 @@
         "users": "chittyledger",
         "cases": "chittyledger",
         "evidence": "chittyledger",
-        "evidence_chain": "chittyledger",
-        "facts": "chittyledger",
         "atomic_facts": "chittyledger",
         "contradictions": "chittyledger",
         "chain_of_custody": "chittyledger",
@@ -92,16 +90,6 @@
         "canon_audit_log": "shared",
         "leadership_initiatives": "chittystandards",
         "schema_registry": "chittycanon",
-        "canon.policies": "chittycanon",
-        "canon.skills": "chittycanon",
-        "canon.agents": "chittycanon",
-        "canon.channels": "chittycanon",
-        "canon.identity_classes": "chittycanon",
-        "canon.baseline_services": "chittycanon",
-        "canon.archetypes": "chittycanon",
-        "canon.trust_domains": "chittycanon",
-        "canon.service_access": "chittycanon",
-        "canon.config": "chittycanon",
         "domain_needs": "chittystandards",
         "concept_needs": "chittystandards"
       }
@@ -537,34 +525,12 @@
       "stewards": "@chittyfoundation/ledger"
     },
     {
-      "table": "evidence_chain",
-      "database": "chittyledger",
-      "service": "chittyledger",
-      "repo": "CHITTYFOUNDATION/chittyschema",
-      "authoringFile": "migrations/chittyledger/001_initial_evidence_schema.sql",
-      "canonType": "E",
-      "semver": "0.1.0",
-      "legalHold": true,
-      "stewards": "@chittyfoundation/ledger"
-    },
-    {
       "table": "chain_of_custody",
       "database": "chittyledger",
       "service": "chittyledger",
       "repo": "CHITTYFOUNDATION/chittyschema",
       "authoringFile": "migrations/chittyledger/001_initial_evidence_schema.sql",
       "canonType": "E",
-      "semver": "0.1.0",
-      "legalHold": true,
-      "stewards": "@chittyfoundation/ledger"
-    },
-    {
-      "table": "facts",
-      "database": "chittyledger",
-      "service": "chittyledger",
-      "repo": "CHITTYFOUNDATION/chittyschema",
-      "authoringFile": "migrations/chittyledger/001_initial_evidence_schema.sql",
-      "canonType": "T",
       "semver": "0.1.0",
       "legalHold": true,
       "stewards": "@chittyfoundation/ledger"
@@ -632,72 +598,6 @@
       "authoringFile": "migrations/0001_initial_schema.sql",
       "canonType": "A",
       "semver": "0.1.0",
-      "legalHold": false,
-      "stewards": "@chittyfoundation/canon"
-    },
-    {
-      "table": "canon.policies",
-      "database": "chittycanon",
-      "service": "chittycanon",
-      "repo": "CHITTYFOUNDATION/chittyschema",
-      "authoringFile": "migrations/chittycanon/002_shared_rules.sql",
-      "canonType": "A",
-      "semver": "0.2.0",
-      "legalHold": false,
-      "stewards": "@chittyfoundation/canon"
-    },
-    {
-      "table": "canon.skills",
-      "database": "chittycanon",
-      "service": "chittycanon",
-      "repo": "CHITTYFOUNDATION/chittyschema",
-      "authoringFile": "migrations/chittycanon/002_shared_rules.sql",
-      "canonType": "A",
-      "semver": "0.2.0",
-      "legalHold": false,
-      "stewards": "@chittyfoundation/canon"
-    },
-    {
-      "table": "canon.agents",
-      "database": "chittycanon",
-      "service": "chittycanon",
-      "repo": "CHITTYFOUNDATION/chittyschema",
-      "authoringFile": "migrations/chittycanon/002_shared_rules.sql",
-      "canonType": "P",
-      "semver": "0.2.0",
-      "legalHold": false,
-      "stewards": "@chittyfoundation/canon"
-    },
-    {
-      "table": "canon.channels",
-      "database": "chittycanon",
-      "service": "chittycanon",
-      "repo": "CHITTYFOUNDATION/chittyschema",
-      "authoringFile": "migrations/chittycanon/002_shared_rules.sql",
-      "canonType": "L",
-      "semver": "0.2.0",
-      "legalHold": false,
-      "stewards": "@chittyfoundation/canon"
-    },
-    {
-      "table": "canon.identity_classes",
-      "database": "chittycanon",
-      "service": "chittycanon",
-      "repo": "CHITTYFOUNDATION/chittyschema",
-      "authoringFile": "migrations/chittycanon/002_shared_rules.sql",
-      "canonType": "A",
-      "semver": "0.2.0",
-      "legalHold": false,
-      "stewards": "@chittyfoundation/canon"
-    },
-    {
-      "table": "canon.baseline_services",
-      "database": "chittycanon",
-      "service": "chittycanon",
-      "repo": "CHITTYFOUNDATION/chittyschema",
-      "authoringFile": "migrations/chittycanon/002_shared_rules.sql",
-      "canonType": "A",
-      "semver": "0.2.0",
       "legalHold": false,
       "stewards": "@chittyfoundation/canon"
     },
