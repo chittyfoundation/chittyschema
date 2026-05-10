@@ -16,16 +16,21 @@
 //       DLQ chittyschema-drift-scan-dlq for persistent failures
 //
 // Database URL secrets per manifested Neon database are injected via
-// `wrangler secret put` — NOT declared here. The manifested env var names
-// (from database-config.json `databases[].envVar`):
-//   CHITTYOS_CORE_DB_URL        → chittyos-core
-//   CHITTYLEDGER_DB_URL         → chittyledger
+// `wrangler secret put` — NOT declared here. Currently set on production
+// (verified via Cloudflare API on 2026-05-10):
 //   CHITTYCANON_DB_URL          → chittycanon
-//   CHITTYEVIDENCE_DB_URL       → chittyevidence-db
 //   CHITTYCOMMAND_DB_URL        → chittycommand
+//   CHITTYCOUNSEL_DB_URL        → chittycounsel
+//   CHITTYDISPUTE_DB_URL        → chittydispute
+//   CHITTYEVIDENCE_DB_URL       → chittyevidence-db
+//   CHITTYFINANCE_DB_URL        → chittyfinance
+//   CHITTYLEDGER_DB_URL         → chittyledger
+//   CHITTYOS_CORE_DB_URL        → chittyos-core
+//
+// Manifested but not yet bound (drift scans for these emit
+// `schema.scan.skip` with `reason: "not_configured"`):
 //   CHITTYAGENT_TASKS_DB_URL    → chittyentity-tasks
 //   CHITTYCONNECT_DB_URL        → chittyconnect
-//   CHITTYDISPUTE_DB_URL        → chittydispute
 //
 // Any DB whose secret is not bound emits `schema.scan.skip` events with
 // `reason: "not_configured"` — these are real, actionable signals, not stubs.
@@ -60,6 +65,40 @@
     {
       "binding": "CANON_CACHE",
       "id": "c006b33782094997a1f94b02eb99535a"
+    }
+  ],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE_COMMAND",
+      "id": "6f6cba43540b430eb77045f79384ca00"
+    },
+    {
+      "binding": "HYPERDRIVE_CORE",
+      "id": "1d126444cff1416cb415447e6cc6d15a"
+    },
+    {
+      "binding": "HYPERDRIVE_COUNSEL",
+      "id": "38d25002523142fcbe91631a08254854"
+    },
+    {
+      "binding": "HYPERDRIVE_EVIDENCE",
+      "id": "5057f7a63d2a4a15b19ac45ce44a05c1"
+    },
+    {
+      "binding": "HYPERDRIVE_FINANCE",
+      "id": "89158b50e55a4d5d9279b5d5c890ea7b"
+    },
+    {
+      "binding": "HYPERDRIVE_LEDGER",
+      "id": "bd15768d341944c2b8bc6578f795df9a"
+    },
+    {
+      "binding": "HYPERDRIVE_RESOLUTION",
+      "id": "df36b0552d9e4ffdbf63de8861dabece"
+    },
+    {
+      "binding": "HYPERDRIVE_TRACE",
+      "id": "a41987b2faff4acc92d4570117c65f94"
     }
   ],
   "r2_buckets": [
