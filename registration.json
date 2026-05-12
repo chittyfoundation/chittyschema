@@ -1,0 +1,29 @@
+{
+  "name": "chittyschema",
+  "tier": 0,
+  "category": "trust-anchor",
+  "canonical_uri": "chittycanon://core/services/chittyschema",
+  "domain": "schema.chitty.cc",
+  "health_endpoint": "/health",
+  "entity_type": "P",
+  "capabilities": [
+    "schema.validate",
+    "schema.register",
+    "schema.diff",
+    "schema.certify"
+  ],
+  "dependencies": {
+    "upstream": [
+      "neon",
+      "1password-connect",
+      "hyperdrive-command",
+      "hyperdrive-core",
+      "hyperdrive-counsel",
+      "hyperdrive-evidence",
+      "hyperdrive-finance",
+      "hyperdrive-ledger",
+      "hyperdrive-resolution",
+      "hyperdrive-trace"
+    ]
+  }
+}

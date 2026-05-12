@@ -1,0 +1,101 @@
+name: chittyschema — registration approval request
+
+on:
+  workflow_dispatch:
+    inputs:
+      requested_by:
+        description: "ChittyID of the requestor"
+        required: true
+        type: string
+      approvers:
+        description: "Comma-separated ChittyIDs for approvers"
+        required: true
+        type: string
+      approvals_url:
+        description: "Approvals API endpoint"
+        required: false
+        default: "https://get.chitty.cc/api/approvals"
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  submit-approval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate registration.json
+        run: |
+          test -f registration.json || { echo "missing registration.json" >&2; exit 1; }
+          jq . registration.json > /dev/null
+          jq -e '.name == "chittyschema"' registration.json > /dev/null
+          jq -e '.canonical_uri == "chittycanon://core/services/chittyschema"' registration.json > /dev/null
+          jq -e '.entity_type != null and .entity_type != ""' registration.json > /dev/null
+
+      - name: Fetch ephemeral approval token
+        id: creds
+        uses: CHITTYOS/chittyops/.github/actions/getchitty-creds@main
+        with:
+          api_key: ${{ secrets.CHITTYCONNECT_API_KEY }}
+          purpose: "chittyschema-registration-approval"
+          service: "chittyschema"
+          credentials: "REGISTER_TOKEN"
+
+      - name: Submit approval request
+        env:
+          APPROVALS_URL: ${{ inputs.approvals_url }}
+          REQUESTED_BY: ${{ inputs.requested_by }}
+          APPROVERS_CSV: ${{ inputs.approvers }}
+          TOKEN: ${{ steps.creds.outputs.register_token }}
+        run: |
+          set -euo pipefail
+
+          APPROVERS_JSON=$(printf '%s' "$APPROVERS_CSV" | jq -R 'split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))')
+          jq -e 'length > 0' <<< "$APPROVERS_JSON" > /dev/null
+
+          jq -n \
+            --arg requestedBy "$REQUESTED_BY" \
+            --argjson approvers "$APPROVERS_JSON" \
+            --slurpfile reg registration.json \
+            '{
+              entityType: "service",
+              entityData: {
+                name: $reg[0].name,
+                canonical_uri: $reg[0].canonical_uri,
+                domain: $reg[0].domain,
+                tier: $reg[0].tier,
+                capabilities: $reg[0].capabilities,
+                category: $reg[0].category,
+                health_endpoint: $reg[0].health_endpoint,
+                dependencies: $reg[0].dependencies
+              },
+              requestedBy: $requestedBy,
+              approvers: $approvers
+            }' > /tmp/approval-request.json
+
+          BODY_FILE=$(mktemp)
+          if [ -n "$TOKEN" ]; then
+            HTTP_CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' -X POST "$APPROVALS_URL" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data @/tmp/approval-request.json)
+          else
+            echo "::warning::no register_token from getchitty-creds — attempting unauthenticated POST"
+            HTTP_CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' -X POST "$APPROVALS_URL" \
+              -H 'Content-Type: application/json' \
+              --data @/tmp/approval-request.json)
+          fi
+
+          echo "HTTP $HTTP_CODE"
+          cat "$BODY_FILE"
+          echo
+
+          if [ -z "$HTTP_CODE" ] || [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::approval submission failed (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+          echo "### Approval submitted for $(jq -r .name registration.json) to $APPROVALS_URL (HTTP $HTTP_CODE)" >> "$GITHUB_STEP_SUMMARY"
