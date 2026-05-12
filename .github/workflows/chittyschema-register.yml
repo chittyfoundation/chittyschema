@@ -77,18 +77,16 @@ jobs:
               approvers: $approvers
             }' > /tmp/approval-request.json
 
-          BODY_FILE=$(mktemp)
-          if [ -n "$TOKEN" ]; then
-            HTTP_CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' -X POST "$APPROVALS_URL" \
-              -H "Authorization: Bearer $TOKEN" \
-              -H 'Content-Type: application/json' \
-              --data @/tmp/approval-request.json)
-          else
-            echo "::warning::no register_token from getchitty-creds — attempting unauthenticated POST"
-            HTTP_CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' -X POST "$APPROVALS_URL" \
-              -H 'Content-Type: application/json' \
-              --data @/tmp/approval-request.json)
+          if [ -z "$TOKEN" ]; then
+            echo "::error::missing register_token from getchitty-creds"
+            exit 1
           fi
+
+          BODY_FILE=$(mktemp)
+          HTTP_CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' -X POST "$APPROVALS_URL" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data @/tmp/approval-request.json)
 
           echo "HTTP $HTTP_CODE"
           cat "$BODY_FILE"
