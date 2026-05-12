@@ -34,7 +34,7 @@ jobs:
           jq -e '.name == "chittyschema"' registration.json > /dev/null
           jq -e '.canonical_uri == "chittycanon://core/services/chittyschema"' registration.json > /dev/null
           jq -e '.entity_type | test("^[PLTEA]$")' registration.json > /dev/null
-          jq -e '.entity_type == "P"' registration.json > /dev/null
+          jq -e '.entity_type == "A"' registration.json > /dev/null
 
       - name: Fetch ephemeral approval token
         id: creds

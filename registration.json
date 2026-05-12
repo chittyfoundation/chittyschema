@@ -5,7 +5,7 @@
   "canonical_uri": "chittycanon://core/services/chittyschema",
   "domain": "schema.chitty.cc",
   "health_endpoint": "/health",
-  "entity_type": "P",
+  "entity_type": "A",
   "capabilities": [
     "schema.validate",
     "schema.register",
