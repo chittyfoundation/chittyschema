@@ -33,11 +33,12 @@ jobs:
           jq . registration.json > /dev/null
           jq -e '.name == "chittyschema"' registration.json > /dev/null
           jq -e '.canonical_uri == "chittycanon://core/services/chittyschema"' registration.json > /dev/null
-          jq -e '.entity_type != null and .entity_type != ""' registration.json > /dev/null
+          jq -e '.entity_type | test("^[PLTEA]$")' registration.json > /dev/null
+          jq -e '.entity_type == "P"' registration.json > /dev/null
 
       - name: Fetch ephemeral approval token
         id: creds
-        uses: CHITTYOS/chittyops/.github/actions/getchitty-creds@main
+        uses: CHITTYOS/chittyops/.github/actions/getchitty-creds@d544af59c1419acdd2225f8a7d94dd59c948bc46
         with:
           api_key: ${{ secrets.CHITTYCONNECT_API_KEY }}
           purpose: "chittyschema-registration-approval"
