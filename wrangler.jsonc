@@ -1,39 +1,3 @@
-// chittyschema-api — Cloudflare Workers configuration
-//
-// PR H wires the full Cloudflare-native ongoing validation loop:
-//   - triggers.crons: hourly drift scan (cron → enqueueFullScan → DRIFT_QUEUE)
-//   - tail_consumers: structured logs to ChittyTrack at track.chitty.cc
-//   - kv_namespaces:
-//       REGISTRY_KV   — pre-existing service-registration KV (PR #5)
-//       BEACON_STORE  — service deployment announcements (PR H)
-//       CANON_CACHE   — cached canon.chitty.cc ontology (PR H, awaits PR C)
-//   - r2_buckets:
-//       CANONICAL_SCHEMAS — JSON Schemas served at /meta/* (PR H, used by PR J)
-//       DRIFT_ARCHIVE     — compliance retention for drift events (PR H)
-//   - queues:
-//       producer DRIFT_QUEUE → chittyschema-drift-scan (cron fan-out)
-//       consumer chittyschema-drift-scan → handleDriftScanBatch
-//       DLQ chittyschema-drift-scan-dlq for persistent failures
-//
-// Database URL secrets per manifested Neon database are injected via
-// `wrangler secret put` — NOT declared here. Currently set on production
-// (verified via Cloudflare API on 2026-05-10):
-//   CHITTYCANON_DB_URL          → chittycanon
-//   CHITTYCOMMAND_DB_URL        → chittycommand
-//   CHITTYCOUNSEL_DB_URL        → chittycounsel
-//   CHITTYDISPUTE_DB_URL        → chittydispute
-//   CHITTYEVIDENCE_DB_URL       → chittyevidence-db
-//   CHITTYFINANCE_DB_URL        → chittyfinance
-//   CHITTYLEDGER_DB_URL         → chittyledger
-//   CHITTYOS_CORE_DB_URL        → chittyos-core
-//
-// Manifested but not yet bound (drift scans for these emit
-// `schema.scan.skip` with `reason: "not_configured"`):
-//   CHITTYAGENT_TASKS_DB_URL    → chittyentity-tasks
-//   CHITTYCONNECT_DB_URL        → chittyconnect
-//
-// Any DB whose secret is not bound emits `schema.scan.skip` events with
-// `reason: "not_configured"` — these are real, actionable signals, not stubs.
 {
   "name": "chittyschema",
   "main": "connectivity/api/index.ts",
@@ -142,6 +106,22 @@
     "command": "npm run build:api"
   },
   "observability": {
-    "enabled": true
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+      "destinations": [
+        "chittytrack-logs"
+      ]
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "destinations": [
+        "chittytrack-traces"
+      ],
+      "persist": false
+    }
   }
 }
