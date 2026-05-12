@@ -106,5 +106,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "overrides": {
+    "flatted": "3.4.2"
   }
 }
