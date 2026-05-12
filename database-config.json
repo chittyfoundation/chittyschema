@@ -197,6 +197,16 @@
       }
     },
     {
+      "name": "chittycounsel",
+      "description": "Counsel-specific case management and legal operations database",
+      "envVar": "CHITTYCOUNSEL_DB_URL",
+      "owner": "ChittyCounsel Team",
+      "services": [
+        "chittycounsel"
+      ],
+      "tables": {}
+    },
+    {
       "name": "chittyentity-tasks",
       "description": "Agent task queue and interaction log for distributed ChittyAgent workers",
       "envVar": "CHITTYAGENT_TASKS_DB_URL",

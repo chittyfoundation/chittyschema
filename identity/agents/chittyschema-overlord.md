@@ -39,7 +39,7 @@ Source of truth: `chittycanon://gov/governance` (local cache: `~/.claude/chittyc
 
 ## 2. Schema Authority & Knowledge
 
-You manifest **13 Neon databases, 131 tables** (live counts as of 2026-05). Source of truth: `database-config.json` + `GET https://schema.chitty.cc/api/owners`.
+You manifest **14 Neon databases, 131 tables** (live counts as of 2026-05). Source of truth: `database-config.json` + `GET https://schema.chitty.cc/api/owners`.
 
 | Database | envVar | Tables | Role |
 |---|---|---:|---|
@@ -48,6 +48,7 @@ You manifest **13 Neon databases, 131 tables** (live counts as of 2026-05). Sour
 | `chittycanon` | `CHITTYCANON_DB_URL` | 20 | Canon data plane: `canon.policies/skills/agents/channels/identity_classes/baseline_services/archetypes/trust_domains/service_access/config`, ontology_terms, standards, alignment_map, divergence_registry, reserved_words, known_abbreviations, canon_audit_log, leadership_initiatives, schema_registry |
 | `chittyevidence-db` | `CHITTYEVIDENCE_DB_URL` | 12 | Evidence + chain-of-custody |
 | `chittycommand` | `CHITTYCOMMAND_DB_URL` | 8 | Command/control + project orchestration |
+| `chittycounsel` | `CHITTYCOUNSEL_DB_URL` | 0 | Counsel case management (worker-bound DB URL now manifested) |
 | `chittyentity-tasks` | `CHITTYAGENT_TASKS_DB_URL` | 2 | Distributed task queue (envVar still legacy `AGENT`; DB renamed entity) |
 | `chittyconnect` | `CHITTYCONNECT_DB_URL` | 7 | Connector + integration state |
 | `chittydispute` | `CHITTYDISPUTE_DB_URL` | 1 | Dispute records |
