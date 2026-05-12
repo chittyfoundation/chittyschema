@@ -49,6 +49,43 @@ type Bindings = {
 } & Record<string, unknown>;
 
 const app = new Hono<{ Bindings: Bindings }>();
+const manifestedDatabaseEnvVars = new Set(
+  (
+    dbConfig as {
+      databases: Array<{ envVar: string }>;
+    }
+  ).databases.map((db) => db.envVar)
+);
+
+function getDatabaseBindingCoverage(env: Record<string, unknown>): {
+  manifestedCount: number;
+  boundManifestedCount: number;
+  missingManifested: string[];
+  unmanifestedBound: string[];
+} {
+  const boundDbUrlSecrets = Object.keys(env)
+    .filter((key) => {
+      if (!key.endsWith('_DB_URL')) return false;
+      const value = env[key];
+      return typeof value === 'string' && value.trim().length > 0;
+    })
+    .sort();
+
+  const missingManifested = [...manifestedDatabaseEnvVars]
+    .filter((envVar) => !boundDbUrlSecrets.includes(envVar))
+    .sort();
+
+  const unmanifestedBound = boundDbUrlSecrets.filter(
+    (envVar) => !manifestedDatabaseEnvVars.has(envVar)
+  );
+
+  return {
+    manifestedCount: manifestedDatabaseEnvVars.size,
+    boundManifestedCount: manifestedDatabaseEnvVars.size - missingManifested.length,
+    missingManifested,
+    unmanifestedBound,
+  };
+}
 
 // Middleware
 app.use('*', logger());
@@ -91,6 +128,7 @@ app.get('/api/v1/status', (c) => {
       DRIFT_ARCHIVE: !!c.env.DRIFT_ARCHIVE,
       DRIFT_QUEUE: !!c.env.DRIFT_QUEUE,
     },
+    databaseBindings: getDatabaseBindingCoverage(c.env),
     timestamp: new Date().toISOString(),
   });
 });
