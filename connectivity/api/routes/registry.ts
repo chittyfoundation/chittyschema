@@ -209,7 +209,7 @@ registryRoute.post('/register', async (c) => {
  * Validate a service's schema compliance.
  *
  * POST /api/registry/validate/:serviceName
- * Body: { repoUrl: string, branch?: string }
+ * Body: { repoUrl: string, branch?: string, version?: string }
  *
  * Fetches the candidate repo's compliance artifacts from GitHub raw URLs
  * (database-config.json, CHARTER.md, CHITTY.md, CLAUDE.md, package.json),
@@ -217,6 +217,10 @@ registryRoute.post('/register', async (c) => {
  *
  * If `repoUrl` is omitted but the service is in the registry KV with
  * a `metadata.repository` field, that repo is used.
+ *
+ * When `version` is provided it is stored on `evidence.version` in the
+ * response and written back to `schemaVersion` in the registry KV entry
+ * so the manifest reflects which version was last validated.
  */
 registryRoute.post('/validate/:serviceName', async (c) => {
   const serviceName = c.req.param('serviceName');
@@ -228,6 +232,7 @@ registryRoute.post('/validate/:serviceName', async (c) => {
   // Resolve repo URL: explicit body wins, otherwise look up in KV
   let repoUrl = body.repoUrl;
   let branch = body.branch || 'main';
+  const version = body.version;
 
   const kv = c.env.REGISTRY_KV;
   let registration: SchemaRegistration | null = null;
@@ -260,7 +265,7 @@ registryRoute.post('/validate/:serviceName', async (c) => {
   let complianceCheck;
   try {
     complianceCheck = await validateRegistration(
-      { serviceName, repoUrl, branch },
+      { serviceName, repoUrl, branch, version },
       { githubToken: c.env.GITHUB_TOKEN }
     );
   } catch (err) {
@@ -294,6 +299,10 @@ registryRoute.post('/validate/:serviceName', async (c) => {
       audit_logging: registration.compliance?.audit_logging ?? false,
       security_validated: complianceCheck.overall_status !== 'non_compliant',
     };
+    // Update the validated version when supplied by the caller.
+    if (version) {
+      registration.schemaVersion = version;
+    }
     registration.metadata.updated_at = new Date().toISOString();
     await kv.put(`registry:${serviceName}`, JSON.stringify(registration));
   }

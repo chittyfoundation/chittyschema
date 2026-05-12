@@ -9,7 +9,7 @@
  * Doctrine: chittycanon://gov/governance#no-mocks-no-fakes
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 import { registryRoute } from '../connectivity/api/routes/registry';
 import { createTestEnv, type TestHarness } from './helpers/miniflare-env';
@@ -259,5 +259,214 @@ describe('all-routes: missing KV binding', () => {
       harness.ctx
     );
     expect(res.status).toBe(503);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A minimal valid database-config.json that satisfies the manifest meta-schema.
+// Used by validate-endpoint tests to fake GitHub raw responses.
+// ---------------------------------------------------------------------------
+const VALID_MANIFEST = JSON.stringify({
+  databases: [
+    {
+      name: 'test-db',
+      description: 'Test database',
+      envVar: 'TEST_DB_URL',
+      owner: 'test-owner',
+      services: ['test-service'],
+      tables: { test_table: 'test-service' },
+    },
+  ],
+  tableOwners: [],
+});
+
+const VALID_PACKAGE_JSON = JSON.stringify({ name: 'test-service' });
+
+/**
+ * Build a stub `fetch` that returns different bodies depending on the URL path.
+ *
+ * `files` maps trailing path segments (e.g. "database-config.json") to their
+ * content string. Any path not listed returns a 404.
+ */
+function buildFetchStub(files: Record<string, string>) {
+  return vi.fn(async (url: RequestInfo | URL): Promise<Response> => {
+    const u = typeof url === 'string' ? url : url.toString();
+    for (const [filename, content] of Object.entries(files)) {
+      if (u.endsWith(filename)) {
+        return new Response(content, { status: 200 });
+      }
+    }
+    return new Response('Not Found', { status: 404 });
+  });
+}
+
+describe('POST /api/registry/validate/:serviceName', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('400s when repoUrl is absent and service is not in KV', async () => {
+    const res = await fetchApp('/api/registry/validate/unknown-svc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toMatch(/repoUrl/i);
+  });
+
+  it('400s when repoUrl has an invalid shape', async () => {
+    const res = await fetchApp('/api/registry/validate/svc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repoUrl: 'not-a-valid-repo-url' }),
+    });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toMatch(/invalid repoUrl/i);
+  });
+
+  it('returns non_compliant when database-config.json is absent (required.fail > 0)', async () => {
+    // No database-config.json — all required checks fail.
+    vi.stubGlobal('fetch', buildFetchStub({}));
+
+    const res = await fetchApp('/api/registry/validate/missing-manifest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repoUrl: 'https://github.com/example/missing-manifest' }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      validation: { overall_status: string; required: { fail: number } };
+    };
+    expect(body.validation.overall_status).toBe('non_compliant');
+    expect(body.validation.required.fail).toBeGreaterThan(0);
+  });
+
+  it('returns compliant when all required and recommended files are present', async () => {
+    vi.stubGlobal(
+      'fetch',
+      buildFetchStub({
+        'database-config.json': VALID_MANIFEST,
+        'CHARTER.md': '# Charter',
+        'CHITTY.md': '# Chitty',
+        'CLAUDE.md': '# Claude',
+        'package.json': VALID_PACKAGE_JSON,
+      })
+    );
+
+    const res = await fetchApp('/api/registry/validate/test-service', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        repoUrl: 'https://github.com/example/test-service',
+        branch: 'main',
+        version: '1.2.3',
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      service: string;
+      validation: {
+        overall_status: string;
+        score: number;
+        required: { fail: number };
+        evidence: { version?: string };
+      };
+    };
+    expect(body.service).toBe('test-service');
+    expect(body.validation.overall_status).toBe('compliant');
+    expect(body.validation.required.fail).toBe(0);
+    expect(body.validation.score).toBe(100);
+    // version must be echoed back in evidence
+    expect(body.validation.evidence.version).toBe('1.2.3');
+  });
+
+  it('persists schemaVersion in KV when version is supplied', async () => {
+    // Pre-register the service so the route finds it in KV.
+    await harness.env.REGISTRY_KV.put(
+      'registry:versioned-svc',
+      JSON.stringify({
+        serviceName: 'versioned-svc',
+        organization: 'chittyfoundation',
+        tier: 1,
+        storageType: 'postgresql',
+        schemaVersion: '0.1.0',
+        schemaLocation: '',
+        deployment: {},
+        compliance: {
+          temporal_versioning: false,
+          gdpr_compliant: false,
+          audit_logging: false,
+          security_validated: false,
+        },
+        patterns: {
+          naming_convention: 'custom',
+          primary_key_pattern: 'unknown',
+          index_strategy: 'unknown',
+        },
+        validation: { status: 'pending', last_validated: '2026-01-01T00:00:00Z' },
+        metadata: {
+          repository: 'https://github.com/example/versioned-svc',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      })
+    );
+
+    vi.stubGlobal(
+      'fetch',
+      buildFetchStub({
+        'database-config.json': VALID_MANIFEST,
+        'package.json': JSON.stringify({ name: 'versioned-svc' }),
+      })
+    );
+
+    const res = await fetchApp('/api/registry/validate/versioned-svc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        repoUrl: 'https://github.com/example/versioned-svc',
+        version: '2.0.0',
+      }),
+    });
+    expect(res.status).toBe(200);
+
+    // Confirm the KV entry now carries the new version.
+    const stored = await harness.env.REGISTRY_KV.get('registry:versioned-svc');
+    expect(stored).not.toBeNull();
+    const parsed = JSON.parse(stored!) as { schemaVersion: string; validation: { status: string } };
+    expect(parsed.schemaVersion).toBe('2.0.0');
+    expect(parsed.validation.status).not.toBe('pending');
+  });
+
+  it('uses metadata.repository from KV when repoUrl is omitted', async () => {
+    await harness.env.REGISTRY_KV.put(
+      'registry:kv-repo-svc',
+      JSON.stringify({
+        serviceName: 'kv-repo-svc',
+        organization: 'chittyapps',
+        tier: 2,
+        validation: { status: 'pending', last_validated: '2026-01-01T00:00:00Z' },
+        metadata: {
+          repository: 'https://github.com/example/kv-repo-svc',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      })
+    );
+
+    vi.stubGlobal('fetch', buildFetchStub({}));
+
+    const res = await fetchApp('/api/registry/validate/kv-repo-svc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    // Should reach the validator (even though it returns non_compliant — no files)
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { service: string };
+    expect(body.service).toBe('kv-repo-svc');
   });
 });

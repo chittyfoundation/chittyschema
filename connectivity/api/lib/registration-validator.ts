@@ -40,6 +40,8 @@ export interface RegistrationValidationRequest {
   repoUrl: string;
   /** Git ref to validate against. Default: "main". */
   branch?: string;
+  /** Semver version string being registered (e.g. "1.2.0"). Stored in evidence. */
+  version?: string;
 }
 
 export interface ComplianceItem {
@@ -66,6 +68,8 @@ export interface ComplianceCheck {
     branch: string;
     commit_sha?: string;
     fetched_at: string;
+    /** Semver version string from the registration request, when provided. */
+    version?: string;
   };
 }
 
@@ -218,6 +222,7 @@ export async function validateRegistration(
       repo: `${owner}/${repo}`,
       branch,
       fetched_at: new Date().toISOString(),
+      ...(req.version ? { version: req.version } : {}),
     },
   };
 }
