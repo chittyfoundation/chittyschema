@@ -152,7 +152,7 @@ export async function handleRegistrationWebhook(requestBody: ServiceRegistration
  *
  * The endpoint is real and lives at:
  *   POST {schemaBaseUrl}/api/registry/validate/:serviceName
- *   Body: { repoUrl, branch? }
+ *   Body: { repoUrl, branch?, version? }
  *
  * Default schemaBaseUrl is https://schema.chitty.cc. Override for staging
  * or local dev (e.g. http://localhost:8787).
@@ -175,6 +175,7 @@ export async function validateForRegistrationViaHttp(
       body: JSON.stringify({
         repoUrl: request.repoUrl,
         branch: request.branch,
+        version: request.version,
       }),
     });
   } catch (err) {
