@@ -16,14 +16,19 @@
     "upstream": [
       "neon",
       "1password-connect",
-      "hyperdrive-command",
-      "hyperdrive-core",
-      "hyperdrive-counsel",
-      "hyperdrive-evidence",
-      "hyperdrive-finance",
-      "hyperdrive-ledger",
-      "hyperdrive-resolution",
-      "hyperdrive-trace"
+      "chittyos-core",
+      "chittyledger",
+      "chittycanon",
+      "chittyevidence-db",
+      "chittycommand",
+      "chittyentity-tasks",
+      "chittyconnect",
+      "chittydispute",
+      "chittydna",
+      "chittygov",
+      "chittyfinance",
+      "chittyresolution",
+      "chittyharvest"
     ]
   }
 }

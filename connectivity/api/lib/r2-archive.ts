@@ -11,7 +11,7 @@
  *   snapshot/{YYYY}/{MM}/{DD}/manifest.json
  *   snapshot/{YYYY}/{MM}/{DD}/{database}/{table}.signature.json
  *
- * @canon chittycanon://core/services/chitty-schema#archive
+ * @canon chittycanon://core/services/chittyschema#archive
  */
 
 import type { DriftState } from './drift-check';

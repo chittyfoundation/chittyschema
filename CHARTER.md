@@ -13,7 +13,7 @@ visibility: PUBLIC
 # ChittySchema Charter
 
 ## Classification
-- **Canonical URI**: `chittycanon://core/services/chitty-schema`
+- **Canonical URI**: `chittycanon://core/services/chittyschema`
 - **Tier**: 0 (Trust Anchors)
 - **Organization**: CHITTYFOUNDATION
 - **Domain**: schema.chitty.cc

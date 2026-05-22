@@ -15,7 +15,7 @@
  * KV namespace itself has a much longer floor — we treat anything in KV as
  * potentially serveable until the next successful refresh.
  *
- * @canon chittycanon://core/services/chitty-schema#canon-client
+ * @canon chittycanon://core/services/chittyschema#canon-client
  */
 
 const CANON_BASE = 'https://canon.chitty.cc';

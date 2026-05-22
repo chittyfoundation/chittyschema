@@ -12,7 +12,7 @@ visibility: PUBLIC
 
 # ChittySchema
 
-> `chittycanon://core/services/chitty-schema` | Tier 0 (Trust Anchors) | schema.chitty.cc
+> `chittycanon://core/services/chittyschema` | Tier 0 (Trust Anchors) | schema.chitty.cc
 
 ## What It Does
 

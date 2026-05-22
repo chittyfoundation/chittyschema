@@ -23,7 +23,7 @@
  *   all required, any recommended failed -> compliant_with_warnings
  *   all required + recommended passed   -> compliant
  *
- * @canon chittycanon://core/services/chitty-schema#registration-validator
+ * @canon chittycanon://core/services/chittyschema#registration-validator
  */
 
 import { validateManifest } from './meta-validator';

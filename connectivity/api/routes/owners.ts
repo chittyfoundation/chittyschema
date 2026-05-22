@@ -16,7 +16,7 @@
  * The manifest is sourced from database-config.json `tableOwners[]`.
  * See `../../database-config.json` and the top-level OPS.md for the policy.
  *
- * @canon chittycanon://core/services/chitty-schema#owners
+ * @canon chittycanon://core/services/chittyschema#owners
  */
 
 import { Hono } from 'hono';

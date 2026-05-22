@@ -14,7 +14,7 @@
  * served at `GET /meta/:name` so external consumers can $ref them — but
  * that's a *publishing* concern, not a *validation* concern.
  *
- * @canon chittycanon://core/services/chitty-schema#meta-validator
+ * @canon chittycanon://core/services/chittyschema#meta-validator
  */
 
 import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020';

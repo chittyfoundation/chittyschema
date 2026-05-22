@@ -17,7 +17,7 @@
  * service that needs to verify a portfolio-owners or repo-requirements
  * document can now do so over HTTP without cloning chittyschema.
  *
- * @canon chittycanon://core/services/chitty-schema#meta
+ * @canon chittycanon://core/services/chittyschema#meta
  */
 
 import { Hono } from 'hono';
