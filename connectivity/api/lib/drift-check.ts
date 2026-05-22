@@ -13,7 +13,7 @@
  * database, that database's scan emits `schema.scan.skip` with the reason —
  * it is a real, actionable signal (not a placeholder).
  *
- * @canon chittycanon://core/services/chitty-schema#drift
+ * @canon chittycanon://core/services/chittyschema#drift
  */
 
 // @ts-expect-error — JSON import resolves via resolveJsonModule

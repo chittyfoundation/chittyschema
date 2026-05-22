@@ -7,7 +7,7 @@ ChittySchema is the schema governance service for the ChittyOS ecosystem. It ser
 **Repo:** `CHITTYFOUNDATION/chittyschema`
 **Deploy:** Cloudflare Workers at `schema.chitty.cc`
 **Stack:** Hono TypeScript (API), Zod (validation), PostgreSQL (introspection), Cloudflare KV
-**Canonical URI:** `chittycanon://core/services/chitty-schema` | Tier 0
+**Canonical URI:** `chittycanon://core/services/chittyschema` | Tier 0
 **Package:** `@chittyos/schema` (published to GitHub npm registry)
 
 ## Repository Layout — Fractal Trinity

@@ -12,7 +12,7 @@
  *   - Per-table failures stop blocking the rest of the scan.
  *   - DLQ gives operators a clean place to inspect persistent failures.
  *
- * @canon chittycanon://core/services/chitty-schema#queue
+ * @canon chittycanon://core/services/chittyschema#queue
  */
 
 // @ts-expect-error — JSON import resolves via resolveJsonModule

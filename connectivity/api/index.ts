@@ -114,7 +114,7 @@ app.get('/api/health', healthHandler);
 app.get('/api/v1/status', (c) => {
   return c.json({
     service: 'chittyschema',
-    canonicalUri: 'chittycanon://core/services/chitty-schema',
+    canonicalUri: 'chittycanon://core/services/chittyschema',
     tier: 0,
     domain: 'schema.chitty.cc',
     version: '1.0.0',

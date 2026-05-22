@@ -1,0 +1,34 @@
+{
+  "name": "chittyschema",
+  "tier": 0,
+  "category": "trust-anchor",
+  "canonical_uri": "chittycanon://core/services/chittyschema",
+  "domain": "schema.chitty.cc",
+  "health_endpoint": "/health",
+  "entity_type": "A",
+  "capabilities": [
+    "schema.validate",
+    "schema.register",
+    "schema.diff",
+    "schema.certify"
+  ],
+  "dependencies": {
+    "upstream": [
+      "neon",
+      "1password-connect",
+      "chittyos-core",
+      "chittyledger",
+      "chittycanon",
+      "chittyevidence-db",
+      "chittycommand",
+      "chittyentity-tasks",
+      "chittyconnect",
+      "chittydispute",
+      "chittydna",
+      "chittygov",
+      "chittyfinance",
+      "chittyresolution",
+      "chittyharvest"
+    ]
+  }
+}

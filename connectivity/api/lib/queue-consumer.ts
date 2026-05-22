@@ -8,7 +8,7 @@
  * Each successful scan also writes the resulting `DriftState` to the R2
  * archive bucket so operators have an immutable, queryable history.
  *
- * @canon chittycanon://core/services/chitty-schema#queue-consumer
+ * @canon chittycanon://core/services/chittyschema#queue-consumer
  */
 
 import { checkTable } from './drift-check';
