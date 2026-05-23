@@ -1,0 +1,55 @@
+name: Release @chittyos/schema-client to npm
+
+on:
+  push:
+    tags:
+      - 'schema-client-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (e.g. 0.1.0) — must match clients/schema-client/package.json'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: clients/schema-client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install root deps (provides tsc)
+        run: npm ci
+        working-directory: ${{ github.workspace }}
+
+      - name: Typecheck
+        run: ${{ github.workspace }}/node_modules/.bin/tsc --noEmit
+
+      - name: Build
+        run: ${{ github.workspace }}/node_modules/.bin/tsc
+
+      - name: Verify version matches tag
+        if: github.event_name == 'push'
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#schema-client-v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match tag ($TAG_VERSION)"
+            exit 1
+          fi
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
