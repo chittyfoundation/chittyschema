@@ -40,7 +40,8 @@
     "test:watch": "vitest",
     "lint": "eslint identity/src --ext .ts",
     "format": "prettier --write \"identity/src/**/*.ts\"",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "prepare": "npm run build"
   },
   "keywords": [
     "chittyos",
