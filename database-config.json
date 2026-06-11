@@ -409,6 +409,18 @@
         "harvest_events": "chittyharvest",
         "adapter_runs": "chittyharvest"
       }
+    },
+    {
+      "name": "chittycertify",
+      "description": "ChittyCertify worker DB (Tier 1): badge records for canon artifacts (chittycanon:// docs). Distinct from service_certifications in chittyregister.",
+      "envVar": "CHITTYCERTIFY_DB_URL",
+      "owner": "ChittyFoundation Certify Team",
+      "services": [
+        "chittycertify"
+      ],
+      "tables": {
+        "artifact_certifications": "chittycertify"
+      }
     }
   ],
   "tableOwners": [
@@ -1891,6 +1903,17 @@
       "semver": "0.1.0",
       "legalHold": false,
       "stewards": "@chittyfoundation/harvest"
+    },
+    {
+      "table": "artifact_certifications",
+      "database": "chittycertify",
+      "service": "chittycertify",
+      "repo": "CHITTYFOUNDATION/chittyschema",
+      "authoringFile": "connectivity/migrations/chittycertify/001_artifact_certifications.sql",
+      "canonType": "A",
+      "semver": "0.1.0",
+      "legalHold": false,
+      "stewards": "@chittyfoundation/certify"
     }
   ]
 }
