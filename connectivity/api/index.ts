@@ -15,6 +15,7 @@ import { validateRoute } from './routes/validate';
 import { tablesRoute } from './routes/tables';
 import { generateRoute } from './routes/generate';
 import { registryRoute } from './routes/registry';
+import { toolsRoute } from './routes/tools';
 import { ownersRoute } from './routes/owners';
 import { metaRoute } from './routes/meta';
 import { checkTable } from './lib/drift-check';
@@ -210,6 +211,7 @@ app.route('/api/validate', validateRoute);
 app.route('/api/tables', tablesRoute);
 app.route('/api/generate', generateRoute);
 app.route('/api/registry', registryRoute);
+app.route('/api/tools', toolsRoute);
 app.route('/api/owners', ownersRoute);
 app.route('/meta', metaRoute);
 
