@@ -1,6 +1,6 @@
 {
   "name": "@chittyos/schema-client",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Attachable auto-syncing schema node for ChittyOS consumer services",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,7 +11,10 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -27,7 +30,12 @@
     "url": "https://github.com/CHITTYFOUNDATION/chittyschema.git",
     "directory": "clients/schema-client"
   },
-  "keywords": ["chittyos", "schema", "validation", "drift-detection"],
+  "keywords": [
+    "chittyos",
+    "schema",
+    "validation",
+    "drift-detection"
+  ],
   "license": "UNLICENSED",
   "engines": {
     "node": ">=20"
