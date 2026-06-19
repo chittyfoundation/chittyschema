@@ -10,7 +10,7 @@
  * way, and the two code paths share one normalizer implementation.
  */
 
-import { normalizeToolSchema, type JsonSchema } from './normalize.js';
+import { normalizeToolSchema, stripTrailingSlashes, type JsonSchema } from './normalize.js';
 
 const DEFAULT_REGISTRY = 'https://schema.chitty.cc';
 const DEFAULT_TTL_MS = 5 * 60 * 1000; // 5-minute fresh window, matches ch1tty tool cache
@@ -75,7 +75,7 @@ export class ToolsClient {
   private readonly cache = new Map<string, CacheEntry>();
 
   constructor(opts: ToolsClientOptions = {}) {
-    this.registry = (opts.registry ?? DEFAULT_REGISTRY).replace(/\/+$/, '');
+    this.registry = stripTrailingSlashes(opts.registry ?? DEFAULT_REGISTRY);
     this.cacheTtlMs = opts.cacheTtlMs ?? DEFAULT_TTL_MS;
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.serviceToken = opts.serviceToken;

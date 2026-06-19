@@ -11,6 +11,8 @@
  * loud signal that canon is unreachable, returning the five canonical types.
  */
 
+import { stripTrailingSlashes } from './normalize.js';
+
 const DEFAULT_CANON_BASE = 'https://canon.chitty.cc';
 const DEFAULT_TTL_MS = 60 * 60 * 1000; // 1-hour fresh window
 const DEFAULT_TIMEOUT_MS = 8_000;
@@ -73,7 +75,7 @@ export class OntologyClient {
   private cached: { value: Ontology; expiresAt: number } | null = null;
 
   constructor(opts: OntologyClientOptions = {}) {
-    this.canonBase = (opts.canonBase ?? DEFAULT_CANON_BASE).replace(/\/+$/, '');
+    this.canonBase = stripTrailingSlashes(opts.canonBase ?? DEFAULT_CANON_BASE);
     this.cacheTtlMs = opts.cacheTtlMs ?? DEFAULT_TTL_MS;
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const f = opts.fetchImpl ?? globalThis.fetch;

@@ -180,3 +180,10 @@ export function envelopeDepth(schema: unknown): number {
   }
   return depth;
 }
+
+/** Strip trailing '/' without a backtracking regex (ReDoS-safe, linear). */
+export function stripTrailingSlashes(s: string): string {
+  let end = s.length;
+  while (end > 0 && s.charCodeAt(end - 1) === 47 /* '/' */) end--;
+  return s.slice(0, end);
+}

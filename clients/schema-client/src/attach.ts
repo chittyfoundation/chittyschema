@@ -11,6 +11,7 @@ import type {
   DriftEvent,
   ValidateResponse,
 } from './types.js';
+import { stripTrailingSlashes } from './normalize.js';
 
 const DEFAULT_REGISTRY = 'https://schema.chitty.cc';
 const DEFAULT_POLL_MS = 15 * 60 * 1000;
@@ -75,7 +76,7 @@ async function validate(
   registry: string,
   opts: AttachOptions,
 ): Promise<ValidateResponse> {
-  const url = `${registry.replace(/\/+$/, '')}/api/registry/validate/${encodeURIComponent(opts.serviceName)}`;
+  const url = `${stripTrailingSlashes(registry)}/api/registry/validate/${encodeURIComponent(opts.serviceName)}`;
   const body: Record<string, unknown> = { version: opts.serviceVersion };
   if (opts.repoUrl) body.repoUrl = opts.repoUrl;
   if (opts.branch) body.branch = opts.branch;
