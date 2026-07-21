@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "tsx watch identity/src/index.ts",
     "dev:api": "wrangler dev connectivity/api/index.ts",
-    "build": "tsc && tsc-alias && tsc -p connectivity/tsconfig.json",
+    "build": "tsc && tsc-alias && tsc -p connectivity/tsconfig.json && tsc -p intake/tsconfig.json",
     "build:api": "tsc && tsc-alias",
     "build:connectivity": "tsc -p connectivity/tsconfig.json",
     "introspect": "tsx identity/scripts/introspect-all.ts",
@@ -41,7 +41,8 @@
     "lint": "eslint identity/src --ext .ts",
     "format": "prettier --write \"identity/src/**/*.ts\"",
     "prepublishOnly": "npm run build",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "build:intake": "tsc -p intake/tsconfig.json"
   },
   "keywords": [
     "chittyos",
@@ -85,6 +86,10 @@
     "./scope-projector": {
       "import": "./connectivity/dist/scope-projector.js",
       "types": "./connectivity/dist/scope-projector.d.ts"
+    },
+    "./intake": {
+      "import": "./intake/dist/index.js",
+      "types": "./intake/dist/index.d.ts"
     }
   },
   "files": [
@@ -99,7 +104,9 @@
     "CHARTER.md",
     "CHITTY.md",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "intake/dist",
+    "intake/schemas"
   ],
   "repository": {
     "type": "git",
