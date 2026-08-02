@@ -1,272 +1,79 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schema.chitty.cc/infrastructure/cloudflare-governance.schema.json",
-  "title": "CloudflareGovernanceRecord",
-  "description": "Phase 0 canonical contract for Cloudflare deployed-state projections. ChittySchema owns this vocabulary; ChittyRegistry enumerates instances. This schema does not authorize Cloudflare mutation.",
-  "oneOf": [
-    { "$ref": "#/$defs/accessApplication" },
-    { "$ref": "#/$defs/accessPolicy" },
-    { "$ref": "#/$defs/trustDomain" },
-    { "$ref": "#/$defs/routeDomainAttachment" },
-    { "$ref": "#/$defs/mcpSurface" },
-    { "$ref": "#/$defs/serviceBinding" },
-    { "$ref": "#/$defs/credentialReference" }
-  ],
-  "$defs": {
-    "canonicalId": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9._:/-]*$",
-      "minLength": 3
-    },
-    "environment": {
-      "type": "string",
-      "enum": ["development", "staging", "production"]
-    },
-    "lifecycleStatus": {
-      "type": "string",
-      "enum": ["observed", "verified", "planned", "active", "deprecated", "retired", "hold"]
-    },
-    "disposition": {
-      "type": "string",
-      "enum": ["keep", "merge", "replace", "alias", "retire", "hold"]
-    },
-    "sourceRef": {
+  "title": "CloudflareGovernanceObservation",
+  "description": "Provisional Phase 0 observation shape for Cloudflare deployed-state evidence. This schema does not author ontology, register services, or authorize mutation. Ontology-bearing values must reference ChittyCanon terms or proposals.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["observationId", "observedAt", "source", "subject", "attributes"],
+  "properties": {
+    "observationId": { "type": "string", "minLength": 1 },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["provider", "objectType", "objectId", "observedAt"],
+      "required": ["provider", "objectType", "objectId"],
       "properties": {
-        "provider": { "type": "string", "const": "cloudflare" },
+        "provider": { "const": "cloudflare" },
         "accountId": { "type": "string", "minLength": 1 },
         "zoneId": { "type": "string", "minLength": 1 },
         "objectType": { "type": "string", "minLength": 1 },
-        "objectId": { "type": "string", "minLength": 1 },
-        "observedAt": { "type": "string", "format": "date-time" }
+        "objectId": { "type": "string", "minLength": 1 }
       }
     },
-    "base": {
+    "subject": {
       "type": "object",
-      "required": ["canonicalId", "objectClass", "environment", "lifecycleStatus", "source"],
+      "additionalProperties": false,
+      "required": ["externalName"],
       "properties": {
-        "canonicalId": { "$ref": "#/$defs/canonicalId" },
-        "objectClass": { "type": "string" },
-        "environment": { "$ref": "#/$defs/environment" },
-        "lifecycleStatus": { "$ref": "#/$defs/lifecycleStatus" },
-        "disposition": { "$ref": "#/$defs/disposition" },
-        "ownerRef": { "$ref": "#/$defs/canonicalId" },
-        "managerRef": { "$ref": "#/$defs/canonicalId" },
-        "schemaVersion": { "type": "string", "const": "0.1.0" },
-        "source": { "$ref": "#/$defs/sourceRef" },
-        "notes": { "type": "string" }
+        "canonicalRecordRef": { "type": "string", "minLength": 1 },
+        "externalName": { "type": "string", "minLength": 1 },
+        "hostname": { "type": "string" },
+        "path": { "type": "string", "pattern": "^/" }
       }
     },
-    "accessApplication": {
-      "allOf": [
-        { "$ref": "#/$defs/base" },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["objectClass", "name", "applicationType", "audience", "accessPurpose", "authModel", "trustDomainRefs"],
-          "properties": {
-            "canonicalId": true,
-            "objectClass": { "const": "access_application" },
-            "environment": true,
-            "lifecycleStatus": true,
-            "disposition": true,
-            "ownerRef": true,
-            "managerRef": true,
-            "schemaVersion": true,
-            "source": true,
-            "notes": true,
-            "name": { "type": "string", "minLength": 1 },
-            "applicationType": { "type": "string", "enum": ["mcp", "mcp_portal", "self_hosted", "saas", "warp", "app_launcher"] },
-            "hostname": { "type": "string", "format": "hostname" },
-            "path": { "type": "string", "pattern": "^/" },
-            "audience": { "type": "string", "enum": ["human_internal", "human_role_scoped", "machine_internal", "machine_external", "managed_mcp", "public_protocol", "public_application", "administrative"] },
-            "accessPurpose": { "type": "string", "minLength": 1 },
-            "authModel": { "type": "string", "enum": ["managed_mcp_native", "access_identity", "service_auth", "service_binding", "bypass", "public"] },
-            "trustDomainRefs": { "type": "array", "items": { "$ref": "#/$defs/canonicalId" }, "uniqueItems": true },
-            "policyRefs": { "type": "array", "items": { "$ref": "#/$defs/canonicalId" }, "uniqueItems": true },
-            "publicProtocolPaths": { "type": "array", "items": { "type": "string", "pattern": "^/" }, "uniqueItems": true },
-            "sessionDuration": { "type": "string", "pattern": "^[0-9]+[smhd]$" },
-            "sessionRationale": { "type": "string" }
-          }
-        }
-      ]
+    "ontologyRefs": {
+      "type": "object",
+      "description": "References to existing ChittyCanon term IDs or formally submitted proposal IDs. No unratified ontology strings may be encoded here.",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
     },
-    "accessPolicy": {
-      "allOf": [
-        { "$ref": "#/$defs/base" },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["objectClass", "name", "decision", "reusable", "ruleFingerprint"],
-          "properties": {
-            "canonicalId": true,
-            "objectClass": { "const": "access_policy" },
-            "environment": true,
-            "lifecycleStatus": true,
-            "disposition": true,
-            "ownerRef": true,
-            "managerRef": true,
-            "schemaVersion": true,
-            "source": true,
-            "notes": true,
-            "name": { "type": "string", "minLength": 1 },
-            "decision": { "type": "string", "enum": ["allow", "deny", "bypass", "non_identity", "service_auth"] },
-            "reusable": { "type": "boolean" },
-            "ruleFingerprint": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
-            "includeTypes": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-            "excludeTypes": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-            "requireTypes": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-            "applicationRefs": { "type": "array", "items": { "$ref": "#/$defs/canonicalId" }, "uniqueItems": true },
-            "exceptionRationale": { "type": "string" }
-          }
-        }
-      ]
+    "schemaRefs": {
+      "type": "array",
+      "items": { "type": "string", "format": "uri-reference" },
+      "uniqueItems": true
     },
-    "trustDomain": {
-      "allOf": [
-        { "$ref": "#/$defs/base" },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["objectClass", "name", "riskDomain", "memberRefs"],
-          "properties": {
-            "canonicalId": true,
-            "objectClass": { "const": "trust_domain" },
-            "environment": true,
-            "lifecycleStatus": true,
-            "disposition": true,
-            "ownerRef": true,
-            "managerRef": true,
-            "schemaVersion": true,
-            "source": true,
-            "notes": true,
-            "name": { "type": "string", "minLength": 1 },
-            "riskDomain": { "type": "string", "enum": ["legal", "finance", "business_ops", "platform", "managed_mcp"] },
-            "memberRefs": { "type": "array", "items": { "$ref": "#/$defs/canonicalId" }, "uniqueItems": true },
-            "permittedRelationshipTypes": { "type": "array", "items": { "type": "string", "enum": ["human", "service_binding", "service_auth", "linked_app_token", "managed_mcp_native"] }, "uniqueItems": true }
-          }
-        }
-      ]
+    "attributes": {
+      "type": "object",
+      "description": "Provider-native observed attributes retained without converting them into local ontology.",
+      "additionalProperties": true
     },
-    "routeDomainAttachment": {
-      "allOf": [
-        { "$ref": "#/$defs/base" },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["objectClass", "hostname", "attachmentType", "semanticOwnerRef", "targetRef"],
-          "properties": {
-            "canonicalId": true,
-            "objectClass": { "const": "route_domain_attachment" },
-            "environment": true,
-            "lifecycleStatus": true,
-            "disposition": true,
-            "ownerRef": true,
-            "managerRef": true,
-            "schemaVersion": true,
-            "source": true,
-            "notes": true,
-            "hostname": { "type": "string", "format": "hostname" },
-            "pathPattern": { "type": "string", "pattern": "^/" },
-            "attachmentType": { "type": "string", "enum": ["managed_portal", "worker_custom_domain", "worker_route", "access_application", "service_binding", "dns_only"] },
-            "semanticOwnerRef": { "$ref": "#/$defs/canonicalId" },
-            "targetRef": { "$ref": "#/$defs/canonicalId" },
-            "aliasOf": { "$ref": "#/$defs/canonicalId" },
-            "precedence": { "type": "integer", "minimum": 0 },
-            "semanticRedundancyFlags": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+    "relationships": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["relationshipTermRef", "targetRef"],
+        "properties": {
+          "relationshipTermRef": { "type": "string", "minLength": 1 },
+          "targetRef": { "type": "string", "minLength": 1 },
+          "purpose": { "type": "string" },
+          "evidenceRefs": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
           }
         }
-      ]
+      }
     },
-    "mcpSurface": {
-      "allOf": [
-        { "$ref": "#/$defs/base" },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["objectClass", "surfaceType", "implementationOwnership", "managementModel", "scope", "canonicalEndpoint"],
-          "properties": {
-            "canonicalId": true,
-            "objectClass": { "const": "mcp_surface" },
-            "environment": true,
-            "lifecycleStatus": true,
-            "disposition": true,
-            "ownerRef": true,
-            "managerRef": true,
-            "schemaVersion": true,
-            "source": true,
-            "notes": true,
-            "surfaceType": { "type": "string", "enum": ["server", "portal", "gateway", "registry", "schema"] },
-            "implementationOwnership": { "type": "string", "enum": ["chitty_owned", "third_party_owned", "jointly_operated", "unknown"] },
-            "managementModel": { "type": "string", "enum": ["chitty_managed", "provider_managed", "cloudflare_managed_portal", "self_managed_worker", "externally_managed"] },
-            "scope": { "type": "string", "enum": ["single_capability", "domain_scoped", "service_scoped", "multi_service", "estate_wide"] },
-            "canonicalEndpoint": { "type": "string", "format": "uri" },
-            "memberRefs": { "type": "array", "items": { "$ref": "#/$defs/canonicalId" }, "uniqueItems": true },
-            "codeMode": { "type": "boolean" },
-            "authPosture": { "type": "string", "enum": ["managed_native", "chittyauth", "access", "service_auth", "public", "unknown"] }
-          }
-        }
-      ]
+    "findingRefs": {
+      "type": "array",
+      "description": "References to generic observations or ratified finding terms; findings are not defined by this schema.",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
     },
-    "serviceBinding": {
-      "allOf": [
-        { "$ref": "#/$defs/base" },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["objectClass", "callerRef", "targetRef", "bindingName", "purpose"],
-          "properties": {
-            "canonicalId": true,
-            "objectClass": { "const": "service_binding" },
-            "environment": true,
-            "lifecycleStatus": true,
-            "disposition": true,
-            "ownerRef": true,
-            "managerRef": true,
-            "schemaVersion": true,
-            "source": true,
-            "notes": true,
-            "callerRef": { "$ref": "#/$defs/canonicalId" },
-            "targetRef": { "$ref": "#/$defs/canonicalId" },
-            "bindingName": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
-            "purpose": { "type": "string", "minLength": 1 },
-            "allowedOperations": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
-          }
-        }
-      ]
-    },
-    "credentialReference": {
-      "allOf": [
-        { "$ref": "#/$defs/base" },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["objectClass", "issuer", "credentialType", "referenceName", "subjectRef", "audience"],
-          "properties": {
-            "canonicalId": true,
-            "objectClass": { "const": "credential_reference" },
-            "environment": true,
-            "lifecycleStatus": true,
-            "disposition": true,
-            "ownerRef": true,
-            "managerRef": true,
-            "schemaVersion": true,
-            "source": true,
-            "notes": true,
-            "issuer": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
-            "credentialType": { "type": "string", "enum": ["service_token", "api_token", "client_secret", "access_token", "certificate", "signing_key"] },
-            "referenceName": { "type": "string", "pattern": "^[a-z][a-z0-9]*_issued_[a-z][a-z0-9_]*$" },
-            "subjectRef": { "$ref": "#/$defs/canonicalId" },
-            "audience": { "type": "string", "minLength": 1 },
-            "scope": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-            "storageAuthorityRef": { "$ref": "#/$defs/canonicalId" },
-            "rotationAuthorityRef": { "$ref": "#/$defs/canonicalId" },
-            "expiresAt": { "type": "string", "format": "date-time" }
-          }
-        }
-      ]
-    }
+    "contentHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
   }
 }
