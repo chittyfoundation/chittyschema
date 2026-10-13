@@ -169,3 +169,45 @@ These require runtime/deployment/database inspection before destructive retireme
 - Matter/Legalink authority map: `chittyfoundation/chittycanon/planning/MATTER_LEGALINK_ARCHITECTURE.md`
 - ChittySchema legacy evidence migration: `chittyfoundation/chittyschema/connectivity/migrations/chittyledger/001_initial_evidence_schema.sql`
 - ChittyEvidence legacy consolidation statement: `chittyapps/chittyevidence/UNIFIED_ARCHITECTURE.md`
+
+
+## Runtime proof — 2026-10-13
+
+Cloudflare account inventory confirms deployed Workers named `chittyevidence-db`, `chittyrouter`, `chittyintel`, `chittyledger`, `chittyapi`, `chittychronicle`, `chittyconnect`, `chittyschema`, `chittyid`, `chittyscore-worker`, and `chittystorage`.
+
+Inspection of the deployed Worker bundles establishes the following write-capability findings:
+
+### P0: chittyintel — deployed independent atomic-fact writer
+
+The deployed `chittyintel` bundle contains:
+- direct `INSERT INTO atomic_facts`;
+- legacy `classification_level` semantics;
+- candidate extraction logic that can label records with legacy epistemic classes;
+- source code configured with `NEON_DATABASE_URL` for direct database access.
+
+Repository source confirms both case-wide and single-evidence analysis routes call `persistFacts()` directly. This is an independent legal fact writer and is not merely a projection.
+
+Containment PR: `chittyos/chittyintel#38` gates the legacy writer off by default pending migration to ChittyEvidence.
+
+### P0: chittyrouter — deployed competing schema + write-capable projection
+
+The deployed `chittyrouter` bundle contains the legacy lists:
+- `DATE | AMOUNT | ADMISSION | IDENTITY | LOCATION | RELATIONSHIP | ACTION | STATUS`;
+- `FACT | SUPPORTED_CLAIM | ASSERTION | ALLEGATION | CONTRADICTION`.
+
+It also contains `NotionAtomicFactsSync` configured through `NOTION_DATABASE_ID_ATOMIC_FACTS`, with create/update upsert behavior. This proves the deployed router still carries a competing semantic contract and a write-capable projection path.
+
+The projection must not be allowed to promote its values back into the governed ChittyEvidence store.
+
+### P0: chittyevidence-db — deployed dual factual models
+
+The deployed canonical evidence Worker currently contains:
+- D1 `evidence_statement_of_facts` logic; and
+- a separate Neon `atomic_facts` sync path.
+
+The Neon path writes legacy classification/certainty fields while the D1 path implements the current legal fact-governance store. This is an internal split-brain risk inside the canonical service itself and must be reconciled before the Evidence Matrix contract is finalized.
+
+### Runtime activity limitation
+
+A Workers Observability query for the prior seven days returned zero log events for these three services. That result does **not** prove zero requests or zero writes: log availability/coverage is not established. Deployed code and configured write paths establish capability; actual recent invocation frequency remains unverified and requires database/audit-log or request-traffic evidence.
+
