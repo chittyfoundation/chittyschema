@@ -64,10 +64,11 @@
       "observed": [
         "evidence runtime",
         "atomic fact projection",
-        "local schema definitions"
+        "local schema definitions",
+        "deployed evidence_statement_of_facts plus separate Neon atomic_facts writer"
       ],
-      "confidence": "verified-default-branch",
-      "disposition": "keep-evidence-authority-consume-canon-schema"
+      "confidence": "verified-deployed-dual-fact-model",
+      "disposition": "p0-reconcile-dual-model-keep-evidence-authority"
     },
     {
       "repo": "chittyos/chittyrouter",
@@ -75,20 +76,23 @@
       "observed": [
         "Notion atomic-facts schema",
         "classification enums",
-        "sync/extraction"
+        "sync/extraction",
+        "deployed NotionAtomicFactsSync create/update path"
       ],
-      "confidence": "verified-default-branch",
-      "disposition": "retire-merge"
+      "confidence": "verified-deployed-write-capable-projection",
+      "disposition": "p0-freeze-schema-then-retire-merge"
     },
     {
       "repo": "chittyos/chittyintel",
       "surface": "src/lib/neon.js and src/api/routes/analyze.js",
       "observed": [
         "direct atomic_facts reads/writes",
-        "local schema assumptions"
+        "local schema assumptions",
+        "deployed Worker direct INSERT INTO atomic_facts"
       ],
-      "confidence": "verified-default-branch",
-      "disposition": "gateway-proposal-producer"
+      "confidence": "verified-deployed-write-capable",
+      "disposition": "p0-contain-then-gateway-proposal-producer",
+      "containment_pr": "https://github.com/chittyos/chittyintel/pull/38"
     },
     {
       "repo": "chittyos/chittyledger",
@@ -178,5 +182,23 @@
       "confidence": "partial",
       "disposition": "hold-runtime-ownership-inspection"
     }
-  ]
+  ],
+  "runtime_proof": {
+    "checked_at": "2026-10-13",
+    "cloudflare_account": "0bc21e3a5a9de1a4cc843be9c3e98121",
+    "deployed_workers_confirmed": [
+      "chittyevidence-db",
+      "chittyrouter",
+      "chittyintel",
+      "chittyledger",
+      "chittyapi",
+      "chittychronicle",
+      "chittyconnect",
+      "chittyschema",
+      "chittyid",
+      "chittyscore-worker",
+      "chittystorage"
+    ],
+    "observability_note": "Seven-day Workers Observability queries returned zero log events for chittyintel, chittyrouter, and chittyevidence-db; logging coverage is unverified, so this is not evidence of zero requests or zero writes."
+  }
 }
