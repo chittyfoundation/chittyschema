@@ -1,0 +1,204 @@
+{
+  "version": "0.1.0",
+  "status": "active-audit",
+  "authority": {
+    "ontology": "chittyfoundation/chittycanon",
+    "runtime_schema": "chittyfoundation/chittyschema",
+    "evidence_authority": "chittyos/chittyevidence-db",
+    "storage_authority": "chittyos/chittystorage"
+  },
+  "tracking": {
+    "canon_issue": 96,
+    "schema_issue": 86,
+    "canon_pr": 97
+  },
+  "records": [
+    {
+      "repo": "chittyfoundation/chittyschema",
+      "surface": "connectivity/migrations/chittyledger/001_initial_evidence_schema.sql",
+      "observed": [
+        "fact_type enum",
+        "classification_level enum",
+        "evidence_tier enum",
+        "atomic_facts",
+        "contradictions",
+        "evidence"
+      ],
+      "confidence": "verified-default-branch",
+      "disposition": "keep-authority-migrate-contract"
+    },
+    {
+      "repo": "chittyfoundation/chittychain",
+      "surface": "shared/evidence-ledger-schema.ts",
+      "observed": [
+        "atomic_facts",
+        "classification_level",
+        "contradiction model"
+      ],
+      "confidence": "verified-default-branch",
+      "disposition": "merge-project"
+    },
+    {
+      "repo": "chittyfoundation/chittyscore",
+      "surface": "chittyverify/** and chittypm/chittychain/**",
+      "observed": [
+        "embedded evidence schema copies",
+        "atomic facts",
+        "contradictions"
+      ],
+      "confidence": "verified-default-branch",
+      "disposition": "retire-embedded-authority"
+    },
+    {
+      "repo": "chittyfoundation/chittyid",
+      "surface": "src/api/notion-bridge.js and src/services/notion-sync.js",
+      "observed": [
+        "Notion atomic-fact enum/schema projection"
+      ],
+      "confidence": "verified-default-branch",
+      "disposition": "project"
+    },
+    {
+      "repo": "chittyos/chittyevidence-db",
+      "surface": "migrations-neon/**, src/services/**",
+      "observed": [
+        "evidence runtime",
+        "atomic fact projection",
+        "local schema definitions",
+        "deployed evidence_statement_of_facts plus separate Neon atomic_facts writer"
+      ],
+      "confidence": "verified-deployed-dual-fact-model",
+      "disposition": "p0-reconcile-dual-model-keep-evidence-authority"
+    },
+    {
+      "repo": "chittyos/chittyrouter",
+      "surface": "src/sync/**",
+      "observed": [
+        "Notion atomic-facts schema",
+        "classification enums",
+        "sync/extraction",
+        "deployed NotionAtomicFactsSync create/update path"
+      ],
+      "confidence": "verified-deployed-write-capable-projection",
+      "disposition": "p0-freeze-schema-then-retire-merge"
+    },
+    {
+      "repo": "chittyos/chittyintel",
+      "surface": "src/lib/neon.js and src/api/routes/analyze.js",
+      "observed": [
+        "direct atomic_facts reads/writes",
+        "local schema assumptions",
+        "deployed Worker direct INSERT INTO atomic_facts"
+      ],
+      "confidence": "verified-deployed-write-capable",
+      "disposition": "p0-contain-then-gateway-proposal-producer",
+      "containment_pr": "https://github.com/chittyos/chittyintel/pull/38"
+    },
+    {
+      "repo": "chittyos/chittyledger",
+      "surface": "shared/schema.ts and API routes",
+      "observed": [
+        "atomic facts",
+        "evidence ledger",
+        "contradiction management"
+      ],
+      "confidence": "verified-default-branch",
+      "disposition": "boundary-migration"
+    },
+    {
+      "repo": "chittyos/chittychronicle",
+      "surface": "chittyverify/**",
+      "observed": [
+        "embedded copied evidence/fact schema"
+      ],
+      "confidence": "verified-default-branch",
+      "disposition": "retire-clone"
+    },
+    {
+      "repo": "chittyos/chittyapi",
+      "surface": "api-verify/src/index.ts",
+      "observed": [
+        "independent evidence/atomic_facts/contradiction DDL"
+      ],
+      "confidence": "verified-default-branch",
+      "disposition": "hold-retire-or-adapt"
+    },
+    {
+      "repo": "chittyos/chittyos-workspace",
+      "surface": "CHITTYFOUNDATION/chittyschema/**",
+      "observed": [
+        "legacy/mirrored schema copies",
+        "expanded classification enums",
+        "mapping logic"
+      ],
+      "confidence": "verified-default-branch",
+      "disposition": "mirror-historical-reconcile"
+    },
+    {
+      "repo": "chittyapps/chittyevidence",
+      "surface": "README.md and UNIFIED_ARCHITECTURE.md",
+      "observed": [
+        "case-specific local evidence registry",
+        "local daemon + Worker",
+        "architecture declares chittyevidence-db canonical orchestrator"
+      ],
+      "confidence": "verified-default-branch-runtime-unverified",
+      "disposition": "hold-merge-retire"
+    },
+    {
+      "repo": "chittyapps/chittychat",
+      "surface": "chittychain/shared/evidence-ledger-schema.ts",
+      "observed": [
+        "embedded evidence-ledger schema copy"
+      ],
+      "confidence": "verified-default-branch",
+      "disposition": "retire-clone-project"
+    },
+    {
+      "repo": "chicagoapps/chittycases",
+      "surface": "chittychain/**",
+      "observed": [
+        "embedded evidence/facts services and types"
+      ],
+      "confidence": "verified-default-branch",
+      "disposition": "retire-clone-project"
+    },
+    {
+      "repo": "chittyfoundation/.chittychain",
+      "surface": "evidence-ledger-schema.sql and types/evidence-ledger.ts",
+      "observed": [
+        "separate evidence-ledger SQL/types",
+        "legacy classifications"
+      ],
+      "confidence": "verified-searchable-runtime-unverified",
+      "disposition": "hold-historical-compatibility"
+    },
+    {
+      "repo": "chittyfoundation/chittyledger",
+      "surface": "service repository",
+      "observed": [
+        "ledger service; equivalent atomic-fact DDL not surfaced in initial search"
+      ],
+      "confidence": "partial",
+      "disposition": "hold-runtime-ownership-inspection"
+    }
+  ],
+  "runtime_proof": {
+    "checked_at": "2026-10-13",
+    "cloudflare_account": "0bc21e3a5a9de1a4cc843be9c3e98121",
+    "deployed_workers_confirmed": [
+      "chittyevidence-db",
+      "chittyrouter",
+      "chittyintel",
+      "chittyledger",
+      "chittyapi",
+      "chittychronicle",
+      "chittyconnect",
+      "chittyschema",
+      "chittyid",
+      "chittyscore-worker",
+      "chittystorage"
+    ],
+    "observability_note": "Seven-day Workers Observability queries returned zero log events for chittyintel, chittyrouter, and chittyevidence-db; logging coverage is unverified, so this is not evidence of zero requests or zero writes."
+  }
+}
