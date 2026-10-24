@@ -1,0 +1,198 @@
+-- @canon: chittycanon://gov/governance#core-types
+-- Migration: 004_outbox_keys_occurrence_not_value.sql
+-- Database: chittycertify
+-- Authoring repo: CHITTYFOUNDATION/chittyschema
+--   (Schema Owner Manifest, GET https://schema.chitty.cc/api/owners:
+--    table certification_ledger_outbox -> database chittycertify, service chittycertify,
+--    repo CHITTYFOUNDATION/chittyschema, canonType A, stewards @chittyfoundation/certify)
+-- Target path: connectivity/migrations/chittycertify/004_outbox_keys_occurrence_not_value.sql
+--
+-- Closes: chittyfoundation/chittycertify#25 — a badge that flaps before the
+-- outbox drains repeats an index key, so ON CONFLICT DO NOTHING silently drops a
+-- REAL transition and the writer is told badge_changed=false for a real change.
+--
+-- Companion (code-side, chittycertify): #26 — previous_badge_level sourced from
+-- EXCLUDED records a stale baseline under concurrent divergent evaluations.
+--
+-- ═════════════════════════════════════════════════════════════════════════════
+-- THE DATA-MODEL DECISION
+-- ═════════════════════════════════════════════════════════════════════════════
+--
+-- Migration 003 asked, implicitly, whether an outbox row keys a TRANSITION or an
+-- EVALUATION. It answered "transition", and keyed the index on the VALUE of the
+-- transition: (cert_chitty_id, content_hash, previous_badge, new_badge).
+--
+-- That answer is wrong, and #25 is the proof. An outbox row is one entry in an
+-- append-only audit stream: it keys the OCCURRENCE of an effective-badge change
+-- — the evaluation-write that produced it — not the pair of values that change
+-- happened to carry. Value identity imposes SET semantics on a SEQUENCE. A badge
+-- that goes A -> B -> A -> B legitimately owes ChittyLedger four events; under a
+-- value-keyed unique index the fourth collides with the still-pending first and
+-- is discarded. The audit trail then disagrees with the row it is auditing, and
+-- src/lib/certify.js's stated invariant — "an outbox row exists iff a transition
+-- actually occurred" — is false.
+--
+-- The asymmetry that settles it: in an append-only audit trail a DROPPED event is
+-- unrecoverable and undetectable; a DUPLICATE event is detectable and
+-- reconcilable. The 003 index trades the recoverable failure mode for the
+-- unrecoverable one. That is the wrong direction for an audit surface.
+--
+-- ═════════════════════════════════════════════════════════════════════════════
+-- WHY NO REPLACEMENT INDEX (options considered and rejected)
+-- ═════════════════════════════════════════════════════════════════════════════
+--
+-- (a) Add a baseline discriminator (prior.evaluated_at, or a row version) to the
+--     index key. Rejected. It would bind on the concurrent case (two racers share
+--     one `prior` snapshot) while letting the sequential flap through — but it is
+--     unnecessary once the baseline is read from the LOCKED row (see below), it
+--     adds a column whose only purpose is to be an index discriminator, and every
+--     tie in that discriminator is a silently dropped audit event. Buying a
+--     backstop that is already redundant at the price of a residual drop path is
+--     the same trade 003 made.
+--
+-- (c) Row version + reject/retry. Rejected. Needs a retry loop in the worker and
+--     extra round trips on a stateless neon() HTTP handle, to reimplement
+--     something Postgres already gives for free: ON CONFLICT DO UPDATE
+--     re-evaluates against the locked tuple.
+--
+-- (b) ADOPTED, and it is a CODE change in chittycertify, not a schema one: take
+--     the baseline from the locked row inside DO UPDATE SET when the target row
+--     IS the prior row (compared by chitty_id identity, not by evaluated_at,
+--     which the winner's write bumps). With a fresh baseline the gate
+--     `previous_badge_level IS DISTINCT FROM badge_level` does the suppression
+--     itself: a concurrent loser proposing the SAME badge sees the winner's
+--     committed value and collapses to a no-op, and a loser proposing a DIFFERENT
+--     badge is a genuinely different second change that deserves its own event
+--     (correctly chained X->Y->Z instead of X->Y, X->Z). Verified on PG 17.11,
+--     two real sessions — see the evidence block at the foot of this file.
+--
+-- Both defects are therefore fixed independently, one change each:
+--   * #25 (flap) is fixed by DROPPING THE INDEX alone. The code change is a no-op
+--     for it: in a sequential same-hash flap the target row IS the prior row, so
+--     both baseline sources agree.
+--   * #26 (stale prev) is fixed by the CODE change alone. The index never bound on
+--     it — the keys legitimately differ — and the stale value is also persisted on
+--     artifact_certifications.previous_badge_level, which no index can reach.
+--
+-- ═════════════════════════════════════════════════════════════════════════════
+-- ORDERING IS A HARD GATE — DO NOT APPLY THIS BEFORE THE CODE SHIPS
+-- ═════════════════════════════════════════════════════════════════════════════
+--
+-- REQUIRED ORDER:
+--   1. chittycertify deploys the locked-row baseline in
+--      upsertArtifactCertificationWithOutbox (src/lib/database.js).
+--   2. THEN apply this migration.
+--
+-- The reverse order is the one state strictly WORSE than today: the duplicate
+-- backstop is gone while the stale EXCLUDED baseline is still live, so a
+-- concurrent same-badge race mints TWO identical immutable ledger events for one
+-- change. Measured, not assumed: index absent + current code produced 2 rows of
+-- (Compatible, Compliant); index absent + fixed code produced 1.
+--
+-- Between step 1 and step 2 the system is strictly better than today: no
+-- duplicate path, and #25's drop persists only until this migration lands.
+--
+-- This migration does NOT lean on downstream dedupe. ChittyLedger does not yet
+-- dedupe on event_id (chittyfoundation/chittycertify#17), so "duplicates are
+-- reconcilable" is a statement about detectability, not about an existing
+-- mechanism. With the locked-row baseline there is no KNOWN duplicate-producing
+-- path. The one remaining exposure is the pre-existing cross-hash
+-- concurrent-INSERT limitation documented in 002/database.js, which this index
+-- never covered (content_hash is in its key) and which 004 does not change.
+--
+-- DO NOT APPLY without operator approval per migration governance.
+-- Gate: apply and verify on a Neon branch of the chittycertify project before
+-- this merges.
+
+BEGIN;
+
+-- Drops a UNIQUE index only. No table, column, constraint or row is touched, and
+-- nothing that reads certification_ledger_outbox depends on this index for
+-- lookup: the drain scan uses idx_cert_outbox_due, and identity/idempotency for
+-- the ledger emit is idx_cert_outbox_ledger_event_id. Both survive.
+--
+-- The remaining invariants stay and are the correct ones, because they are about
+-- the row's own content rather than about its relationship to other rows:
+--   cert_outbox_is_a_transition   — a row whose badges match is not an event
+--   cert_outbox_badge_valid       — badge domain
+--   cert_outbox_cert_fk           — the obligation references a real certification
+DROP INDEX IF EXISTS idx_cert_outbox_unique_open_transition;
+
+COMMENT ON TABLE certification_ledger_outbox IS
+  'Transactional outbox for ChittyLedger badge-transition events. One row = one OCCURRENCE of an effective-badge change that ChittyLedger owes an immutable event for — keyed by the evaluation-write that produced it, NOT by the (previous_badge, new_badge) value pair. The same value pair may legitimately recur, including while an earlier occurrence is still undrained (a badge flapping A->B->A->B owes four events): do not reintroduce a value-keyed unique index over open rows, which silently drops the repeat. Duplicate suppression is the gate previous_badge_level IS DISTINCT FROM badge_level evaluated against the LOCKED row in upsertArtifactCertificationWithOutbox, and the locked-tuple status re-evaluation in revokeCertificationsWithOutbox. Inserted in the same atomic statement as the artifact_certifications transition; drained by the chittycertify scheduled() handler. Owned by chittycertify. See chittyfoundation/chittycertify#6, #25, #26.';
+
+COMMIT;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- VERIFICATION (run on the Neon branch after applying; paste results in the PR)
+-- ═════════════════════════════════════════════════════════════════════════════
+--
+-- 1. The index is gone and the others remain:
+--    SELECT indexname FROM pg_indexes WHERE tablename='certification_ledger_outbox';
+--    -- expect: idx_cert_outbox_due, idx_cert_outbox_ledger_event_id,
+--    --         idx_cert_outbox_cert, idx_cert_outbox_failed, the PK.
+--    --         NOT idx_cert_outbox_unique_open_transition.
+--
+-- 2. #25 is closed. With the deployed code, run the same (uri, hash) through
+--    Compatible -> Compliant -> Compatible -> Compliant without draining:
+--    SELECT previous_badge, new_badge FROM certification_ledger_outbox ORDER BY created_at;
+--    -- expect 4 rows, perfectly chained. Before 004 this returns 3 and the
+--    -- fourth call reports outbox_id NULL / badge_changed false for a real change.
+--
+-- 3. The non-transition invariant still bites (004 removed an index, not a CHECK):
+--    INSERT INTO certification_ledger_outbox
+--      (cert_chitty_id, artifact_uri, content_hash, previous_badge, new_badge, award_status)
+--    VALUES ('<a real chitty_id>', 'chittycanon://probe/x', 'h', 'Compliant', 'Compliant', 'active');
+--    -- expect: ERROR violates cert_outbox_is_a_transition
+--
+-- ROLLBACK (forward-only preferred; emergency path only):
+--    -- Drain the outbox to empty FIRST. Recreating a unique index over open rows
+--    -- FAILS if any undrained rows already share a key — which is exactly what a
+--    -- flap produces, and exactly the state 004 exists to allow:
+--    --   SELECT cert_chitty_id, content_hash, previous_badge, new_badge, count(*)
+--    --     FROM certification_ledger_outbox WHERE status IN ('pending','claimed')
+--    --    GROUP BY 1,2,3,4 HAVING count(*) > 1;   -- must be empty
+--    CREATE UNIQUE INDEX idx_cert_outbox_unique_open_transition
+--      ON certification_ledger_outbox (cert_chitty_id, content_hash, previous_badge, new_badge)
+--      NULLS NOT DISTINCT WHERE status IN ('pending','claimed');
+--    -- NOTE: rolling this back WITHOUT also reverting the chittycertify code is
+--    -- safe (the code fix does not depend on the index); rolling back the CODE
+--    -- while 004 stands is NOT — see the ordering gate above.
+--
+-- ═════════════════════════════════════════════════════════════════════════════
+-- EVIDENCE — PostgreSQL 17.11, real two-session concurrency, no mocks.
+-- Schema built by applying 001 + 002 + 003 verbatim from chittyschema origin/main.
+-- Statements executed verbatim from chittycertify origin/main src/lib/database.js
+-- (bfbccca); "fixed" differs only in the previous_badge_level CASE.
+-- ═════════════════════════════════════════════════════════════════════════════
+--
+-- T1  #25 reproduced, index PRESENT, current code. A->B->A->B over one (uri,hash):
+--     4 real transitions -> 3 outbox rows; 4th call returned outbox_id NULL.
+-- T2  Index ABSENT: 4 rows, chained (NULL->Compatible, Compatible->Compliant,
+--     Compliant->Compatible, Compatible->Compliant) — for BOTH current and fixed
+--     code, confirming the CASE is a no-op for the flap and the index is the
+--     whole cause.
+-- T3  BRANCH POINT. Two sessions, same (uri,hash), BOTH proposing Compliant from
+--     Compatible, index ABSENT, fixed code. S1 committed (Compatible->Compliant,
+--     outbox row); S2 unblocked, read previous_badge_level=Compliant from the
+--     locked row, gate false -> outbox_id NULL. EXACTLY ONE outbox row. The gate
+--     alone suppresses the duplicate; the index is redundant.
+-- T4  COUNTERFACTUAL for the ordering gate. Same race, index ABSENT, CURRENT
+--     code: TWO identical (Compatible, Compliant) rows.
+-- T5  #26. Divergent race (S1 Compliant, S2 Certified) from Compatible:
+--       current -> (Compatible,Compliant) + (Compatible,Certified), broken chain,
+--                  row persists previous_badge_level=Compatible (stale).
+--       fixed   -> (Compatible,Compliant) + (Compliant,Certified), correct chain,
+--                  row persists previous_badge_level=Compliant.
+-- T6  #6 NON-REGRESSION, cross-hash effective badge. h1=Compatible, h2=Compliant
+--     (h2 latest). Re-evaluating OLDER h1 to Compliant -> NO event (effective
+--     badge unchanged); re-evaluating h1 to Certified -> (Compliant, Certified).
+--     The CASE falls to EXCLUDED when the target row is not the prior row, so the
+--     effective-badge baseline from the `prior` CTE is preserved.
+-- T7  Concurrent revokes, index ABSENT: S1 revoked both rows (one outbox row
+--     each); S2 matched 0 rows. Protection there is the locked-tuple
+--     re-evaluation of status IN ('active','pending'), independent of the index.
+-- T8  Re-certify after revoke: `prior` empty -> baseline NULL -> first-award
+--     event (NULL -> Compatible). Null-safety of the CASE checked explicitly:
+--     with `prior` empty the identity comparison is FALSE (IS NOT DISTINCT FROM),
+--     so it falls to EXCLUDED, which is NULL. Correct — no effective badge held.
