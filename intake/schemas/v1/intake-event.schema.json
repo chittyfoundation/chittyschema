@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.chitty.cc/intake/v1/intake-event.schema.json",
+  "title": "ChittySync Intake Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["item_id", "transition", "sha256", "file_name_hash", "source_event_hash"],
+  "properties": {
+    "id": { "type": "integer" },
+    "item_id": { "type": "string", "format": "uuid" },
+    "transition": { "enum": ["PREPARED", "PRIMARY_COMMITTED", "PUBLISHED", "ABORTED"] },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "file_name_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "source_sheet_row": { "type": ["integer", "null"] },
+    "source_previous_event_hash": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "source_event_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "payload": { "type": "object" },
+    "created_at": { "type": "string" }
+  }
+}
