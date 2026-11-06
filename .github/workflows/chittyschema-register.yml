@@ -38,7 +38,7 @@ jobs:
 
       - name: Fetch ephemeral approval token
         id: creds
-        uses: CHITTYOS/chittyops/.github/actions/getchitty-creds@d544af59c1419acdd2225f8a7d94dd59c948bc46
+        uses: chittyos/.github/.github/actions/getchitty-creds@b0a5cd4ceac60a4a48634feeeb0b80b9c238e06c
         with:
           api_key: ${{ secrets.CHITTYCONNECT_API_KEY }}
           purpose: "chittyschema-registration-approval"
