@@ -17,13 +17,14 @@ jobs:
       node-version: '20'
       run-ai-review: true
       run-governance: true
+      runner-labels: '["self-hosted","chittyserv"]'
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
   # Schema-specific validation
   validate-schemas:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, chittyserv]
     steps:
       - uses: actions/checkout@v4
 
