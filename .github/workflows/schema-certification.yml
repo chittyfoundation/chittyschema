@@ -19,7 +19,7 @@ on:
 jobs:
   validate:
     name: Validate Schema Compliance
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, chittyserv]
     outputs:
       compliant: ${{ steps.validate.outputs.compliant }}
       score: ${{ steps.validate.outputs.score }}
