@@ -93,20 +93,20 @@ jobs:
 
             const body = `## ${badge}
 
-**Schema Compliance Score:** ${score}/100
+            **Schema Compliance Score:** ${score}/100
 
-<details>
-<summary>📊 Full Compliance Report</summary>
+            <details>
+            <summary>📊 Full Compliance Report</summary>
 
-\`\`\`
-${report}
-\`\`\`
+            \`\`\`
+            ${report}
+            \`\`\`
 
-</details>
+            </details>
 
----
-*Schema certification powered by [chittyschema](https://github.com/chittyfoundation/chittyschema)*
-`;
+            ---
+            *Schema certification powered by [chittyschema](https://github.com/chittyfoundation/chittyschema)*
+            `;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
