@@ -15,7 +15,7 @@
  *   CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... DATABASE_URL=... \
  *     npm run check:no-bypass
  *   npm run check:no-bypass -- --hyperdrive-json h.json --roles-json r.json \
- *     [--target-endpoint ep-xxxx]
+ *     [--target-endpoint ep-xxxx] [--ignore-config <id> ...]
  *
  * Read-only: one GET to the Cloudflare API and one SELECT in a READ ONLY
  * transaction. Passwords and connection strings are never read or printed.
@@ -28,16 +28,30 @@ import pg from 'pg';
 import {
   CORE_ENDPOINT_ID,
   ROLES_SQL,
+  decidePage,
   evaluate,
   parseHyperdrive,
   parseRoles,
   type HyperdriveConfig,
+  type ResultInfo,
   type RolesData,
 } from './lib/no-bypass-check';
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
   return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
+function argAll(name: string): string[] {
+  const out: string[] = [];
+  process.argv.forEach((a, i) => {
+    if (a === name) {
+      const v = process.argv[i + 1];
+      if (v === undefined || v.startsWith('--')) blocked(`${name} requires a value`);
+      out.push(v);
+    }
+  });
+  return out;
 }
 
 function blocked(msg: string): never {
@@ -53,14 +67,25 @@ async function fetchHyperdrive(): Promise<HyperdriveConfig[]> {
     process.exit(2);
   }
   const all: unknown[] = [];
-  for (let page = 1; page < 50; page++) {
-    const url = `https://api.cloudflare.com/client/v4/accounts/${account}/hyperdrive/configs?per_page=100&page=${page}`;
+  const PER_PAGE = 100;
+  const MAX_PAGES = 50;
+  for (let page = 1; ; page++) {
+    const url = `https://api.cloudflare.com/client/v4/accounts/${account}/hyperdrive/configs?per_page=${PER_PAGE}&page=${page}`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) throw new Error(`Cloudflare API returned HTTP ${res.status}`);
-    const body = (await res.json()) as { success?: boolean; result?: unknown };
+    const body = (await res.json()) as { success?: boolean; result?: unknown; result_info?: ResultInfo };
     if (body.success === false || !Array.isArray(body.result)) throw new Error('Cloudflare API response not successful');
     all.push(...body.result);
-    if (body.result.length < 100) break;
+    const d = decidePage({
+      page,
+      perPage: PER_PAGE,
+      maxPages: MAX_PAGES,
+      fetched: all.length,
+      lastLen: body.result.length,
+      resultInfo: body.result_info,
+    });
+    if (d.action === 'error') throw new Error(`Hyperdrive pagination: ${d.reason}`);
+    if (d.action === 'done') break;
   }
   // Only the non-secret fields leave this function.
   return parseHyperdrive(
@@ -93,6 +118,7 @@ async function main(): Promise<void> {
   const hdFile = arg('--hyperdrive-json');
   const rolesFile = arg('--roles-json');
   const endpoint = arg('--target-endpoint') ?? CORE_ENDPOINT_ID;
+  const ignoreConfigs = argAll('--ignore-config');
 
   // Check env up front so a missing input is reported before any I/O.
   if (!hdFile && (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ACCOUNT_ID)) {
@@ -116,8 +142,10 @@ async function main(): Promise<void> {
     blocked(msg);
   }
 
-  const v = evaluate(configs, roles, endpoint);
+  const v = evaluate(configs, roles, endpoint, { ignoreConfigs });
   console.log(`target endpoint ${endpoint}: ${v.matched.length} matching config(s): ${v.matched.join(', ') || '(none)'}`);
+  console.log(`other Neon endpoint config(s) ignored: ${v.otherNeon.length}`);
+  for (const i of v.ignored) console.log(`IGNORED via --ignore-config: ${i}`);
   for (const e of v.errors) console.error(`REFUSED: ${e}`);
   for (const f of v.findings) console.error(`REFUSED: config ${f.config} connects as role ${f.role}: ${f.reasons.join('; ')}`);
   if (v.pass) {

@@ -41,6 +41,10 @@ export interface Finding {
 export interface Verdict {
   pass: boolean;
   matched: string[];
+  /** Configs on a different Neon endpoint (ignored). */
+  otherNeon: string[];
+  /** Unclassifiable configs excluded via --ignore-config, as "name (id)". Always printed. */
+  ignored: string[];
   findings: Finding[];
   /** Fail-closed conditions (nothing matched, role absent, scopes missing). */
   errors: string[];
@@ -64,19 +68,69 @@ SELECT json_build_object(
                 FROM pg_roles r CROSS JOIN targets t WHERE r.rolname !~ '^pg_' AND r.rolname <> t.rolname)
 ) AS result`;
 
-export function matchesTarget(host: string, endpoint: string): boolean {
-  return host.includes(endpoint);
+export type HostClass = 'target' | 'other-neon' | 'unclassifiable';
+
+const NEON_SUFFIX = '[a-z0-9-]+(?:\\.[a-z0-9-]+)*\\.neon\\.tech';
+
+export function normalizeHost(host: string): string {
+  return host.trim().toLowerCase().replace(/\.$/, '');
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Every config is exactly one of: target (Neon grammar for the target endpoint),
+ * other-neon (Neon grammar for any other ep-... endpoint), or unclassifiable
+ * (IP, custom host, non-Neon host) which the gate refuses unless ignored explicitly.
+ */
+export function classifyHost(host: string, endpoint: string): HostClass {
+  const h = normalizeHost(host);
+  const target = new RegExp(`^${escapeRegex(endpoint.toLowerCase())}(-pooler)?\\.${NEON_SUFFIX}$`);
+  if (target.test(h)) return 'target';
+  if (new RegExp(`^ep-[a-z0-9-]+?(-pooler)?\\.${NEON_SUFFIX}$`).test(h)) return 'other-neon';
+  return 'unclassifiable';
+}
+
+export interface EvaluateOptions {
+  /** Hyperdrive config ids explicitly excluded from the unclassifiable refusal. */
+  ignoreConfigs?: string[];
 }
 
 export function evaluate(
   configs: HyperdriveConfig[],
   data: RolesData,
   endpoint: string = CORE_ENDPOINT_ID,
+  opts: EvaluateOptions = {},
 ): Verdict {
   const errors: string[] = [];
   const findings: Finding[] = [];
+  const ignoreIds = new Set(opts.ignoreConfigs ?? []);
 
-  const matched = configs.filter((c) => matchesTarget(c.origin.host, endpoint));
+  const matched: HyperdriveConfig[] = [];
+  const otherNeon: string[] = [];
+  const ignored: string[] = [];
+  const usedIgnores = new Set<string>();
+  for (const c of configs) {
+    const cls = classifyHost(c.origin.host, endpoint);
+    if (cls === 'target') matched.push(c);
+    else if (cls === 'other-neon') otherNeon.push(c.name);
+    else if (c.id !== undefined && ignoreIds.has(c.id)) {
+      usedIgnores.add(c.id);
+      ignored.push(`${c.name} (${c.id})`);
+    } else {
+      errors.push(
+        `config ${c.name}${c.id ? ` (${c.id})` : ''}: host ${JSON.stringify(c.origin.host)} is unclassifiable ` +
+          `(not a Neon host); it may reach the target database. Re-run with --ignore-config <id> only if verified unrelated`,
+      );
+    }
+  }
+  for (const id of ignoreIds) {
+    if (!usedIgnores.has(id)) {
+      errors.push(`--ignore-config ${id} does not match any unclassifiable config (typo, stale, or it is a Neon-host config that cannot be ignored)`);
+    }
+  }
   if (matched.length === 0) {
     errors.push(`no Hyperdrive config matches target endpoint ${endpoint}`);
   }
@@ -113,6 +167,8 @@ export function evaluate(
   return {
     pass: errors.length === 0 && findings.length === 0,
     matched: matched.map((c) => c.name),
+    otherNeon,
+    ignored,
     findings,
     errors,
   };
@@ -152,4 +208,46 @@ export function parseRoles(json: unknown): RolesData {
     json.member_of.every((m) => isObj(m) && typeof m.role === 'string' && typeof m.target === 'string' && typeof m.is_member === 'boolean');
   if (!ok) throw new Error('roles data has malformed entries');
   return json as unknown as RolesData;
+}
+
+/** Cloudflare list-response paging metadata (only the fields used). */
+export interface ResultInfo {
+  total_count?: number;
+  total_pages?: number;
+}
+
+export interface PageState {
+  page: number;
+  perPage: number;
+  maxPages: number;
+  /** Configs fetched so far, including the page just read. */
+  fetched: number;
+  /** Size of the page just read. */
+  lastLen: number;
+  resultInfo?: ResultInfo;
+}
+
+export type PageDecision = { action: 'continue' } | { action: 'done' } | { action: 'error'; reason: string };
+
+/**
+ * Decide after each page whether to continue, stop, or fail closed.
+ * Never stops silently on truncation: a full last page at the ceiling, or a
+ * fetched count that disagrees with total_count, is an error.
+ */
+export function decidePage(s: PageState): PageDecision {
+  const total = s.resultInfo?.total_count;
+  const pages = s.resultInfo?.total_pages;
+  if (typeof total === 'number') {
+    if (s.fetched === total) return { action: 'done' };
+    if (s.fetched > total) return { action: 'error', reason: `fetched ${s.fetched} configs but API total_count is ${total}` };
+    if (s.lastLen === 0) return { action: 'error', reason: `fetched ${s.fetched} of ${total} configs and the next page was empty` };
+  } else if (typeof pages === 'number' && s.page >= pages) {
+    return { action: 'done' };
+  } else if (typeof pages !== 'number' && s.lastLen < s.perPage) {
+    return { action: 'done' };
+  }
+  if (s.page >= s.maxPages) {
+    return { action: 'error', reason: `page ceiling ${s.maxPages} reached with more configs possibly remaining (${s.fetched} fetched); refusing to truncate` };
+  }
+  return { action: 'continue' };
 }
