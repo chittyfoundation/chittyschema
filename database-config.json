@@ -38,6 +38,7 @@
         "scope_parties": "chittyschema",
         "scope_events": "chittyschema",
         "scope_artifacts": "chittyschema",
+        "scope_external_refs": "chittyschema",
         "audit_logs": "shared"
       }
     },
@@ -1550,6 +1551,18 @@
       "legalHold": true,
       "stewards": "@chittyfoundation/schema",
       "notes": "Storage-agnostic artifacts via storage_type + storage_ref. Integrity via content_hash."
+    },
+    {
+      "table": "scope_external_refs",
+      "database": "chittyos-core",
+      "service": "chittyschema",
+      "repo": "CHITTYFOUNDATION/chittyschema",
+      "authoringFile": "connectivity/migrations/chittyos-core/005_scope_external_refs.sql",
+      "canonType": "T",
+      "semver": "0.1.0",
+      "legalHold": true,
+      "stewards": "@chittyfoundation/schema",
+      "notes": "External references for scopes (chittycanon://specs/matter-scope rule 9). (system, ref) unique table-wide. confirmed_by is a type-P ChittyID. Created locked: RLS enabled and forced, no policy, until space policies land."
     },
     {
       "table": "cases",

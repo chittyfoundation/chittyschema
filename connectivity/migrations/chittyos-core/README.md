@@ -9,6 +9,7 @@ Migration manifest for the chittyos-core Neon database (project `restless-grass-
 | `002_fractal_scopes.sql` | ✅ | Adds `scopes` / `scope_artifacts` / `scope_events` / `scope_parties` tables for the fractal scopes primitive |
 | `003_service_registrations_private_endpoint.sql` | ✅ (PR #34) | Adds `private_endpoint` JSONB column to `service_registrations` for Tailscale Services discovery |
 | `004_trust_scores_ty_vy_ry.sql` | ✅ (2026-05-01) | Adds TY/VY/RY columns to `trust_scores` per White Paper v2.1. Additive — old pre-6D columns (`base_score`, etc.) coexist until consumers migrate |
+| `005_scope_external_refs.sql` | ❌ (not applied) | Adds `scope_external_refs` (matter-scope rule 9), created locked by forced RLS with no policy. Tests: `tests/005_scope_external_refs.test.sql` |
 
 ## Archived
 
