@@ -9,11 +9,20 @@
 -- Spec: chittycanon://specs/matter-scope 0.2.1, rule 9 and open item 8
 -- (chittyfoundation/chittycanon specs/MATTER_SCOPE.md @ 5c31a1c).
 --
--- The table is created LOCKED: row level security is enabled and forced, and
--- no policy is created. Every role without BYPASSRLS (including the table
--- owner, because of FORCE) sees zero rows and cannot insert. Space policies
--- are added by a later migration, after the canon amendment that defines how
--- the database learns a writer's space (matter-scope write gate item 1).
+-- The table is created WRITE-LOCKED, by two independent mechanisms:
+--   1. Writes: BEFORE INSERT/UPDATE/DELETE row triggers and a BEFORE TRUNCATE
+--      statement trigger always raise. This blocks EVERY role, including the
+--      table owner and any BYPASSRLS role (neondb_owner, the role chittyos-core
+--      services use through Hyperdrive). Only session_replication_role =
+--      replica, which needs superuser, skips triggers.
+--   2. Reads: row level security is enabled and forced, with no policy. This
+--      denies reads to every role WITHOUT BYPASSRLS. It does NOT bind
+--      neondb_owner or any other BYPASSRLS role (BYPASSRLS beats FORCE), so
+--      those roles can still read. The table is empty and, while the write
+--      trigger exists, nothing can be written to it.
+-- A later migration that adds the space policies (after the canon amendment
+-- that defines how the database learns a writer's space, matter-scope write
+-- gate item 1) drops the write-lock triggers and function.
 --
 -- Applying this migration does NOT open the matter write gate. Gate items 1
 -- (write-time Legalink suppression) and 3 (rule 10 link check) still block
@@ -56,10 +65,30 @@ CREATE INDEX IF NOT EXISTS idx_scope_external_refs_scope
 
 ALTER TABLE scope_external_refs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scope_external_refs FORCE ROW LEVEL SECURITY;
--- No policy on purpose. See header.
+-- No policy on purpose: denies reads to roles without BYPASSRLS. See header.
+
+-- Write lock that BYPASSRLS and the table owner cannot skip.
+CREATE OR REPLACE FUNCTION scope_external_refs_write_gate() RETURNS trigger
+LANGUAGE plpgsql AS $fn$
+BEGIN
+  RAISE EXCEPTION
+    'scope_external_refs is write-locked: % is blocked until the space policies land (chittycanon://specs/matter-scope, write gate)', TG_OP
+    USING ERRCODE = 'insufficient_privilege';
+END;
+$fn$;
+
+DROP TRIGGER IF EXISTS trg_scope_external_refs_write_gate ON scope_external_refs;
+CREATE TRIGGER trg_scope_external_refs_write_gate
+  BEFORE INSERT OR UPDATE OR DELETE ON scope_external_refs
+  FOR EACH ROW EXECUTE FUNCTION scope_external_refs_write_gate();
+
+DROP TRIGGER IF EXISTS trg_scope_external_refs_truncate_gate ON scope_external_refs;
+CREATE TRIGGER trg_scope_external_refs_truncate_gate
+  BEFORE TRUNCATE ON scope_external_refs
+  FOR EACH STATEMENT EXECUTE FUNCTION scope_external_refs_write_gate();
 
 COMMENT ON TABLE scope_external_refs IS
-  'External references for scopes (chittycanon://specs/matter-scope rule 9). Written only on operator confirmation. Locked by forced RLS with no policy until space policies land.';
+  'External references for scopes (chittycanon://specs/matter-scope rule 9). Written only on operator confirmation. Writes are blocked for every role (owner and BYPASSRLS included) by trigger until space policies land; forced RLS with no policy denies reads to non-BYPASSRLS roles only.';
 COMMENT ON COLUMN scope_external_refs.system IS
   'The outside system that assigned the identifier.';
 COMMENT ON COLUMN scope_external_refs.ref IS
@@ -90,6 +119,13 @@ BEGIN
     WHERE schemaname = 'public' AND tablename = 'scope_external_refs'
   ) THEN
     RAISE EXCEPTION 'scope_external_refs must have no policy';
+  END IF;
+  IF (SELECT count(*) FROM pg_trigger
+      WHERE tgrelid = 'public.scope_external_refs'::regclass
+        AND tgname IN ('trg_scope_external_refs_write_gate',
+                       'trg_scope_external_refs_truncate_gate')
+        AND tgenabled = 'O') <> 2 THEN
+    RAISE EXCEPTION 'scope_external_refs write-lock triggers missing or disabled';
   END IF;
 END $$;
 
