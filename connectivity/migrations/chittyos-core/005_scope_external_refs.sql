@@ -50,9 +50,9 @@ CREATE TABLE IF NOT EXISTS scope_external_refs (
   -- RESTRICT, not CASCADE: rule 10 says a broken link is reported, never
   -- repaired, so deleting a scope must not silently drop its references.
   scope_id      uuid NOT NULL REFERENCES scopes(id) ON DELETE RESTRICT,
-  system        text NOT NULL CHECK (btrim(system) <> ''),
+  system        text NOT NULL CHECK (btrim(system) <> '' AND system = btrim(system)),
   ref           text NOT NULL CHECK (btrim(ref) <> '' AND ref = btrim(ref)),
-  ref_kind      text NOT NULL CHECK (btrim(ref_kind) <> ''),
+  ref_kind      text NOT NULL CHECK (btrim(ref_kind) <> '' AND ref_kind = btrim(ref_kind)),
   -- The originating caller's ChittyID (from a verified ChittyAuth claim),
   -- never a role or service name. Format VV-G-LLL-SSSS-T-YYMM-C-XX per
   -- CHITTYFOUNDATION/chittyid CHARTER.md ("ChittyID Format") and CLAUDE.md

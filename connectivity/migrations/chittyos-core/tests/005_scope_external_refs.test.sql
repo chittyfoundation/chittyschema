@@ -121,6 +121,39 @@ BEGIN
   END;
 END $$;
 
+-- R3b: whitespace cannot defeat table-wide (system, ref) uniqueness. A padded
+-- system or ref_kind is rejected by its CHECK, so 'x' and 'x ' never coexist.
+DO $$
+DECLARE s1 uuid; outcome text;
+BEGIN
+  BEGIN
+    INSERT INTO scopes (characterization, scope_type, creator_id, title)
+    VALUES ('Project', 'test_fixture', '00-0-TST-0001-P-2611-0-00', 'TEST DATA synthetic scope C')
+    RETURNING id INTO s1;
+    BEGIN
+      INSERT INTO scope_external_refs (scope_id, system, ref, ref_kind, confirmed_by, confirmed_at)
+      VALUES (s1, 'test-system ', 'TEST-REF-0002', 'test_kind', '00-0-TST-0001-P-2611-0-00', now());
+      outcome := 'accepted';
+    EXCEPTION WHEN check_violation THEN
+      outcome := 'check_violation';
+    END;
+    IF outcome = 'check_violation' THEN
+      BEGIN
+        INSERT INTO scope_external_refs (scope_id, system, ref, ref_kind, confirmed_by, confirmed_at)
+        VALUES (s1, 'test-system', 'TEST-REF-0002', ' test_kind', '00-0-TST-0001-P-2611-0-00', now());
+        outcome := 'kind_accepted';
+      EXCEPTION WHEN check_violation THEN
+        outcome := 'check_violation';
+      END;
+    END IF;
+    RAISE EXCEPTION USING ERRCODE = 'P0099', MESSAGE = outcome;
+  EXCEPTION WHEN SQLSTATE 'P0099' THEN
+    IF SQLERRM <> 'check_violation' THEN
+      RAISE EXCEPTION 'R3b FAIL: padded system/ref_kind was %', SQLERRM;
+    END IF;
+  END;
+END $$;
+
 -- R4 is MANUAL. It is NOT run by this script and "ALL PASS" below does not
 -- cover it. It needs a second login role, which a single script cannot get.
 -- R4 (separate steps, not a DO block): a non-BYPASSRLS role sees zero rows
