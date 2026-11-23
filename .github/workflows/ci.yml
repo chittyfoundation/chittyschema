@@ -16,7 +16,6 @@ jobs:
     with:
       node-version: '20'
       run-ai-review: true
-      run-governance: true
       runner-labels: '["self-hosted","chittyserv"]'
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
