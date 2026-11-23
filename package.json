@@ -29,6 +29,7 @@
     "validate:portfolio-ownership": "tsx identity/scripts/validate-portfolio-ownership.ts",
     "validate:fractal": "tsx identity/scripts/validate-fractal-layout.ts",
     "validate:fractal-scopes": "tsx identity/scripts/validate-fractal-scopes.ts",
+    "check:no-bypass": "tsx identity/scripts/check-no-bypass-connections.ts",
     "certify": "tsx identity/scripts/validate-service-compliance.ts",
     "migration:create": "tsx identity/scripts/create-migration.ts",
     "migration:apply": "tsx identity/scripts/apply-migration.ts",
