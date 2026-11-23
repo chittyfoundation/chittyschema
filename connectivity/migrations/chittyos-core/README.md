@@ -9,6 +9,15 @@ Migration manifest for the chittyos-core Neon database (project `restless-grass-
 | `002_fractal_scopes.sql` | ✅ | Adds `scopes` / `scope_artifacts` / `scope_events` / `scope_parties` tables for the fractal scopes primitive |
 | `003_service_registrations_private_endpoint.sql` | ✅ (PR #34) | Adds `private_endpoint` JSONB column to `service_registrations` for Tailscale Services discovery |
 | `004_trust_scores_ty_vy_ry.sql` | ✅ (2026-05-01) | Adds TY/VY/RY columns to `trust_scores` per White Paper v2.1. Additive — old pre-6D columns (`base_score`, etc.) coexist until consumers migrate |
+| `006_scope_legal_write_block.sql` | ❌ (not applied) | Write-blocks legal rows on `scopes`, `scope_parties`, `scope_events`, `scope_artifacts` (matter write gate, `chittycanon://specs/matter-scope`). Apply after 005 (PR #92). See "Legal write block (006)" below |
+
+## Legal write block (006)
+
+- **What it blocks.** `scopes` accepts a row only if `scope_type` is on an allowlist of known non-legal types (`project`, `live_stream_session`) and its `metadata` carries no `space=legalink` and no `privilege` of `privileged`/`pii`. The three child tables reject rows whose parent scope is missing or would fail that check. `scope_parties` and `scope_artifacts` also reject their own legalink/privileged/PII metadata. `scope_events.details` is not classification-checked.
+- **Allowlist.** It fails closed: a new or mistyped type is rejected until a migration adds it after classification. `connectivity/api/lib/scope-projector.ts` `SCOPE_TYPES` names many types outside the allowlist. A service that starts projecting one is rejected, and because the projector is fire-and-forget, that rejection is silent unless the caller surfaces it.
+- **What it does not stop.** The triggers are `ENABLE ALWAYS` and block accidental writes by every role, including the table owner and BYPASSRLS roles. A determined client connected as the owner (`neondb_owner`, which chittyos-core services use via Hyperdrive today) can disable or drop them. The real control is moving services off owner/superuser/BYPASSRLS roles (chittyfoundation/chittyauth#81).
+- **Disabling.** The triggers are disabled only inside a test transaction on a disposable branch, for example to insert 005's `test_fixture` scopes. They are re-enabled with `ENABLE ALWAYS` and asserted at `tgenabled='A'`. That is never permission to disable them anywhere else.
+- **Removal gate.** The future migration that drops 005's and 006's triggers may be applied only after a check proves no service connects to chittyos-core as owner, superuser or a BYPASSRLS role. That check script is a follow-up PR.
 
 ## Archived
 

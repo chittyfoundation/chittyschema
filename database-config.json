@@ -1513,7 +1513,7 @@
       "semver": "0.1.0",
       "legalHold": true,
       "stewards": "@chittyfoundation/schema",
-      "notes": "Fractal scope primitive. Self-similar via parent_scope_id. Domain taxonomy in scope_type (free text). Consumers: chittystream-canon (live_stream_session), ChittyEvidence (legal_case), ChittyDispute (dispute), ChittyCommand (project)."
+      "notes": "Fractal scope primitive. Self-similar via parent_scope_id. Domain taxonomy in scope_type (free text). Consumers: chittystream-canon (live_stream_session), ChittyEvidence (legal_case), ChittyDispute (dispute), ChittyCommand (project). Migration 006 write-blocks legal rows (allowlist: project, live_stream_session; legalink/privileged/pii metadata rejected) on scopes and its three child tables until the matter write gate opens (chittycanon://specs/matter-scope). The ENABLE ALWAYS triggers stop accidental writes, not a determined neondb_owner client."
     },
     {
       "table": "scope_parties",
