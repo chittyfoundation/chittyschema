@@ -11,10 +11,15 @@
 --
 -- The table is created WRITE-LOCKED, by two independent mechanisms:
 --   1. Writes: BEFORE INSERT/UPDATE/DELETE row triggers and a BEFORE TRUNCATE
---      statement trigger always raise. This blocks EVERY role, including the
---      table owner and any BYPASSRLS role (neondb_owner, the role chittyos-core
---      services use through Hyperdrive). Only session_replication_role =
---      replica, which needs superuser, skips triggers.
+--      statement trigger always raise. Both are ENABLE ALWAYS (tgenabled = 'A'),
+--      so they fire for every role, including the table owner and any
+--      BYPASSRLS role (neondb_owner, the role chittyos-core services use
+--      through Hyperdrive), and also when session_replication_role = replica.
+--      They block ACCIDENTAL writes. They do NOT stop a determined client
+--      connected as the table owner (neondb_owner): the owner can DISABLE or
+--      DROP them. The actual control is moving services off neondb_owner and
+--      BYPASSRLS roles (chittycanon specs/CHITTYROUX_PRIVILEGE_SPACE.md 1.1.0,
+--      "No bypass"; chittyfoundation/chittyauth#81).
 --   2. Reads: row level security is enabled and forced, with no policy. This
 --      denies reads to every role WITHOUT BYPASSRLS. It does NOT bind
 --      neondb_owner or any other BYPASSRLS role (BYPASSRLS beats FORCE), so
@@ -23,6 +28,12 @@
 -- A later migration that adds the space policies (after the canon amendment
 -- that defines how the database learns a writer's space, matter-scope write
 -- gate item 1) drops the write-lock triggers and function.
+--
+-- !! GATE ON REMOVING THE TRIGGERS !!
+-- The future migration that drops these triggers must be applied only AFTER it
+-- has been verified and recorded that no service connects to chittyos-core as
+-- the table owner, a superuser, or a BYPASSRLS role. If the triggers are
+-- dropped first, the table reopens to writes from those roles.
 --
 -- Applying this migration does NOT open the matter write gate. Gate items 1
 -- (write-time Legalink suppression) and 3 (rule 10 link check) still block
@@ -67,7 +78,8 @@ ALTER TABLE scope_external_refs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scope_external_refs FORCE ROW LEVEL SECURITY;
 -- No policy on purpose: denies reads to roles without BYPASSRLS. See header.
 
--- Write lock that BYPASSRLS and the table owner cannot skip.
+-- Write lock that blocks accidental writes by every role (owner and BYPASSRLS
+-- included), also under replica mode. The owner can still disable or drop it.
 CREATE OR REPLACE FUNCTION scope_external_refs_write_gate() RETURNS trigger
 LANGUAGE plpgsql AS $fn$
 BEGIN
@@ -81,14 +93,16 @@ DROP TRIGGER IF EXISTS trg_scope_external_refs_write_gate ON scope_external_refs
 CREATE TRIGGER trg_scope_external_refs_write_gate
   BEFORE INSERT OR UPDATE OR DELETE ON scope_external_refs
   FOR EACH ROW EXECUTE FUNCTION scope_external_refs_write_gate();
+ALTER TABLE scope_external_refs ENABLE ALWAYS TRIGGER trg_scope_external_refs_write_gate;
 
 DROP TRIGGER IF EXISTS trg_scope_external_refs_truncate_gate ON scope_external_refs;
 CREATE TRIGGER trg_scope_external_refs_truncate_gate
   BEFORE TRUNCATE ON scope_external_refs
   FOR EACH STATEMENT EXECUTE FUNCTION scope_external_refs_write_gate();
+ALTER TABLE scope_external_refs ENABLE ALWAYS TRIGGER trg_scope_external_refs_truncate_gate;
 
 COMMENT ON TABLE scope_external_refs IS
-  'External references for scopes (chittycanon://specs/matter-scope rule 9). Written only on operator confirmation. Writes are blocked for every role (owner and BYPASSRLS included) by trigger until space policies land; forced RLS with no policy denies reads to non-BYPASSRLS roles only.';
+  'External references for scopes (chittycanon://specs/matter-scope rule 9). Written only on operator confirmation. Triggers block accidental writes by every role (owner and BYPASSRLS included), also under replica mode; they do not stop a determined client connected as the table owner, who can disable or drop them. The actual control is moving services off neondb_owner/BYPASSRLS roles (CHITTYROUX_PRIVILEGE_SPACE 1.1.0). Do not drop the triggers until no service connects as owner, superuser or BYPASSRLS. Forced RLS with no policy denies reads to non-BYPASSRLS roles only.';
 COMMENT ON COLUMN scope_external_refs.system IS
   'The outside system that assigned the identifier.';
 COMMENT ON COLUMN scope_external_refs.ref IS
@@ -124,8 +138,8 @@ BEGIN
       WHERE tgrelid = 'public.scope_external_refs'::regclass
         AND tgname IN ('trg_scope_external_refs_write_gate',
                        'trg_scope_external_refs_truncate_gate')
-        AND tgenabled = 'O') <> 2 THEN
-    RAISE EXCEPTION 'scope_external_refs write-lock triggers missing or disabled';
+        AND tgenabled = 'A') <> 2 THEN
+    RAISE EXCEPTION 'scope_external_refs write-lock triggers missing or not ENABLE ALWAYS';
   END IF;
 END $$;
 

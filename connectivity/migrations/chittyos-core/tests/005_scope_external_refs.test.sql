@@ -10,7 +10,7 @@
 -- Run as the connecting/owner role (neondb_owner, which has BYPASSRLS), in ONE
 -- transaction (the Neon MCP run_sql_transaction tool, or psql --single-transaction)
 -- so a failure can never leave the write-lock trigger disabled. Statement
--- order matters: L1, DISABLE TRIGGER, R3, R5, ENABLE TRIGGER, L1b.
+-- order matters: L1, DISABLE TRIGGER, R3, R5, ENABLE ALWAYS TRIGGER, L1b.
 -- Without the migration, L1 fails (the insert succeeds), and R3/R5 fail with
 -- undefined_table. Without the trigger lines in 005, L1 fails.
 --
@@ -56,7 +56,7 @@ BEGIN
     ALTER TABLE scope_external_refs DISABLE TRIGGER trg_scope_external_refs_write_gate;
     INSERT INTO scope_external_refs (scope_id, system, ref, ref_kind, confirmed_by, confirmed_at)
     VALUES (s1, 'test-system', 'TEST-REF-L1-SEED', 'test_kind', '00-0-TST-0001-P-2611-0-00', now());
-    ALTER TABLE scope_external_refs ENABLE TRIGGER trg_scope_external_refs_write_gate;
+    ALTER TABLE scope_external_refs ENABLE ALWAYS TRIGGER trg_scope_external_refs_write_gate;
 
     FOREACH op IN ARRAY ARRAY['UPDATE', 'DELETE', 'TRUNCATE'] LOOP
       BEGIN
@@ -187,9 +187,9 @@ BEGIN
   END;
 END $$;
 
-ALTER TABLE scope_external_refs ENABLE TRIGGER trg_scope_external_refs_write_gate;
+ALTER TABLE scope_external_refs ENABLE ALWAYS TRIGGER trg_scope_external_refs_write_gate;
 
--- L1b: the re-enable took effect (both triggers 'O' = enabled), and an insert
+-- L1b: the re-enable took effect (both triggers 'A' = ENABLE ALWAYS, which also fires under replica mode), and an insert
 -- is blocked again.
 DO $$
 DECLARE s1 uuid; blocked boolean := false;
@@ -198,8 +198,8 @@ BEGIN
       WHERE tgrelid = 'public.scope_external_refs'::regclass
         AND tgname IN ('trg_scope_external_refs_write_gate',
                        'trg_scope_external_refs_truncate_gate')
-        AND tgenabled = 'O') <> 2 THEN
-    RAISE EXCEPTION 'L1b FAIL: write-lock triggers are not both enabled (tgenabled = O)';
+        AND tgenabled = 'A') <> 2 THEN
+    RAISE EXCEPTION 'L1b FAIL: write-lock triggers are not both enabled (tgenabled = A)';
   END IF;
   BEGIN
     INSERT INTO scopes (characterization, scope_type, creator_id, title)

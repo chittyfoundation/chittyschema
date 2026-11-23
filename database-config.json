@@ -1562,7 +1562,7 @@
       "semver": "0.1.0",
       "legalHold": true,
       "stewards": "@chittyfoundation/schema",
-      "notes": "External references for scopes (chittycanon://specs/matter-scope rule 9). (system, ref) unique table-wide. confirmed_by is a type-P ChittyID. Writes are blocked for every role, owner and BYPASSRLS included, by a trigger until space policies land. RLS is enabled and forced with no policy, which denies reads to non-BYPASSRLS roles only; neondb_owner and any BYPASSRLS role can still read. The table is empty."
+      "notes": "External references for scopes (chittycanon://specs/matter-scope rule 9). (system, ref) unique table-wide. confirmed_by is a type-P ChittyID. Triggers (ENABLE ALWAYS) block accidental writes by every role, owner and BYPASSRLS included, also under replica mode; they do not stop a determined client connected as the table owner (neondb_owner), who can disable or drop them. The actual control is moving services off neondb_owner/BYPASSRLS roles (chittycanon specs/CHITTYROUX_PRIVILEGE_SPACE.md 1.1.0, No bypass; chittyauth#81). The future migration that drops the triggers must be applied only after it is verified and recorded that no service connects as owner, superuser or BYPASSRLS. RLS is enabled and forced with no policy, which denies reads to non-BYPASSRLS roles only; neondb_owner and any BYPASSRLS role can still read. The table is empty."
     },
     {
       "table": "cases",
