@@ -4,7 +4,14 @@
  *
  * Removal gate for the scope write-lock triggers (chittyschema PR #92 / #94).
  * The migration that drops those triggers may only be applied once this
- * exits 0 against production.
+ * exits 0 against production. Exit 0 is NECESSARY, NOT SUFFICIENT: it proves
+ * only that no service connects as a bypass-capable role. It does not prove
+ * the replacement control exists. Before dropping the triggers, separately
+ * confirm that RLS is enabled and forced on every scope table, and that the
+ * two-layer space policies (chittycanon specs/CHITTYROUX_PRIVILEGE_SPACE.md
+ * 1.1.0) are in place. It also trusts that the Cloudflare token sees every
+ * Hyperdrive config on the account, and that --target-endpoint names the
+ * real chittyos-core endpoint.
  *
  * Refuses (exit 1) when any Hyperdrive config pointing at chittyos-core
  * connects as a role that is superuser, has BYPASSRLS, owns a scope table,
