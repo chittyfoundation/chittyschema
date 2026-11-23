@@ -23,7 +23,7 @@
     "generate:validators:single": "tsx identity/scripts/generate-validators.ts",
     "generate:docs": "tsx identity/scripts/generate-docs-multi.ts",
     "generate:docs:single": "tsx identity/scripts/generate-docs.ts",
-    "validate": "tsx identity/scripts/validate-schema.ts",
+    "validate": "npm run validate:fractal",
     "validate:manifest": "tsx identity/scripts/validate-manifest.ts",
     "validate:service": "tsx identity/scripts/validate-service-compliance.ts",
     "validate:portfolio-ownership": "tsx identity/scripts/validate-portfolio-ownership.ts",
