@@ -16,6 +16,9 @@ jobs:
     with:
       node-version: '20'
       run-ai-review: true
+      # Security job cannot fail on findings (npm audit || true, Snyk continue-on-error)
+      # and snyk/snyk:node has no arm64 image for the self-hosted runner.
+      run-security: false
       runner-labels: '["self-hosted","chittyserv"]'
     secrets:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
