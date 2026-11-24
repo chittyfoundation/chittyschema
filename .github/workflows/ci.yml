@@ -12,6 +12,9 @@ on:
 
 jobs:
   ci:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     uses: chittyfoundation/.github/.github/workflows/reusable-ci-pipeline.yml@main
     with:
       node-version: '20'
@@ -26,6 +29,9 @@ jobs:
 
   # Schema-specific validation
   validate-schemas:
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, chittyserv]
     steps:
       - uses: actions/checkout@v4
