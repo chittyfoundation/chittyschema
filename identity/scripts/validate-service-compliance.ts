@@ -4,6 +4,7 @@
 
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { pathToFileURL } from 'url';
 import { execSync } from 'child_process';
 import { setupOutputStyle, isCompact, printJSONSummary } from './lib/output-style.ts';
 
@@ -37,7 +38,7 @@ interface Check {
   description: string;
 }
 
-class SchemaComplianceValidator {
+export class SchemaComplianceValidator {
   private servicePath: string;
   private serviceName: string;
   private violations: Violation[] = [];
@@ -143,8 +144,13 @@ class SchemaComplianceValidator {
 
     for (const pattern of roguePatterns) {
       try {
+        // `-name` matches the basename only, so patterns containing a slash need `-path`
+        const base = pattern.replace('**/', '');
+        const matcher = base.includes('/')
+          ? `-path "*/${base.replace('**/', '')}"`
+          : `-name "${base}"`;
         const result = execSync(
-          `find ${this.servicePath} -name "${pattern.replace('**/', '')}" -not -path "*/node_modules/*" 2>/dev/null || true`,
+          `find ${this.servicePath} ${matcher} -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null || true`,
           { encoding: 'utf-8' }
         );
 
@@ -397,7 +403,9 @@ async function main() {
   }
 }
 
-main().catch(error => {
-  console.error('❌ Validation failed:', error.message);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch(error => {
+    console.error('❌ Validation failed:', error.message);
+    process.exit(1);
+  });
+}
